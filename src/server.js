@@ -14,6 +14,7 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") || false }));
 app.use(express.json({ limit: "20kb" }));
+app.use(express.static("src/public"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 200 }));
 
 app.get("/health", (_req, res) => res.json({ status: "ok", app: "4U'S TIPS API" }));
