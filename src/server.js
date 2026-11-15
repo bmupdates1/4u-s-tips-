@@ -11,7 +11,9 @@ if (!process.env.DATABASE_URL || !process.env.JWT_SECRET || process.env.JWT_SECR
 }
 
 const app = express();
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") || false }));
 app.use(express.json({ limit: "20kb" }));
 app.use(express.static("src/public"));
