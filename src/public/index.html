@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4U'S TIPS | Admin Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #071b13;
+      color: white;
+    }
+    header {
+      background: #103d2b;
+      padding: 20px;
+      border-bottom: 2px solid #d4af37;
+    }
+    header h1 { margin: 0; color: #d4af37; }
+    header p { margin-bottom: 0; }
+    main { padding: 20px; max-width: 900px; margin: auto; }
+    .card {
+      background: #123b2b;
+      padding: 20px;
+      margin-bottom: 18px;
+      border-radius: 12px;
+      border: 1px solid #315b45;
+    }
+    h2 { color: #e5c45b; }
+    input, select, button {
+      width: 100%;
+      padding: 13px;
+      margin: 7px 0;
+      border-radius: 7px;
+      border: 0;
+      font-size: 16px;
+    }
+    button {
+      background: #d4af37;
+      color: #071b13;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .tip {
+      background: #09291d;
+      padding: 13px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    #message { color: #e5c45b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>4U'S TIPS</h1>
+    <p>PREDICT SMARTER | ADMIN DASHBOARD</p>
+  </header>
+
+  <main>
+    <section class="card" id="login">
+      <h2>Admin Login</h2>
+      <input id="username" placeholder="Username" value="bm_updates">
+      <input id="password" type="password" placeholder="Password">
+      <button onclick="login()">LOGIN</button>
+      <p id="message"></p>
+    </section>
+
+    <section class="card" id="dashboard" hidden>
+      <h2>Welcome, Super Admin</h2>
+      <button onclick="logout()">LOGOUT</button>
+      <h2>Add New Tip</h2>
+      <input id="match" placeholder="Match name">
+      <input id="prediction" placeholder="Prediction">
+      <input id="odds" type="number" step="any" placeholder="Odds (optional)">
+      <select id="category">
+        <option value="FREE">FREE</option>
+        <option value="PREMIUM">PREMIUM</option>
+      </select>
+      <button onclick="addTip()">PUBLISH TIP</button>
+      <p id="tipMessage"></p>
+
+      <h2>Published Tips</h2>
+      <div id="tips">Loading...</div>
+    </section>
+  </main>
+
+<script>
+const API = "https://fouru-s-tips.onrender.com";
+let token = "";
+
+async function login() {
+  const message = document.getElementById("message");
+  message.textContent = "Logging in...";
+  try {
+    const response = await fetch(API + "/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: document.getElementById("username").value.trim(),
+        password: document.getElementById("password").value
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Login failed");
+    token = data.token;
+    if (data.user.role !== "SUPER_ADMIN") throw new Error("Super Admin access only");
+    document.getElementById("login").hidden = true;
+    document.getElementById("dashboard").hidden = false;
+    loadTips();
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+async function loadTips() {
+  const area = document.getElementById("tips");
+  try {
+    const response = await fetch(API + "/api/tips", {
+      headers: { Authorization: "Bearer " + token }
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not load tips");
+    area.innerHTML = "";
+    if (!data.tips.length) area.textContent = "No tips published yet.";
+    data.tips.forEach(tip => {
+      const item = document.createElement("div");
+      item.className = "tip";
+      item.textContent = tip.matchName + " | " + tip.prediction +
+        " | " + tip.category + " | " + tip.result;
+      area.appendChild(item);
+    });
+  } catch (error) {
+    area.textContent = error.message;
+  }
+}
+
+async function addTip() {
+  const message = document.getElementById("tipMessage");
+  message.textContent = "Publishing...";
+  try {
+    const body = {
+      matchName: document.getElementById("match").value.trim(),
+      prediction: document.getElementById("prediction").value.trim(),
+      category: document.getElementById("category").value
+    };
+    const odds = document.getElementById("odds").value;
+    if (odds !== "") body.odds = Number(odds);
+
+    const response = await fetch(API + "/api/tips", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not publish tip");
+    message.textContent = "Tip published successfully!";
+    document.getElementById("match").value = "";
+    document.getElementById("prediction").value = "";
+    document.getElementById("odds").value = "";
+    loadTips();
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+function logout() {
+  token = "";
+  document.getElementById("dashboard").hidden = true;
+  document.getElementById("login").hidden = false;
+  document.getElementById("password").value = "";
+}
+</script>
+</body>
+</html>
