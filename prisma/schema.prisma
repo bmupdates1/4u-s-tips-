@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,9 +8,11 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
 enum UserRole {
   SUPER_ADMIN
   TIPSTER
+  CUSTOMER
 }
 
 enum TipCategory {
@@ -29,9 +32,14 @@ model User {
   username     String   @unique
   email        String   @unique
   passwordHash String
-  role         UserRole @default(TIPSTER)
+  role         UserRole @default(CUSTOMER)
   isActive     Boolean  @default(true)
+
   tips         Tip[]
+
+  following    Follow[] @relation("CustomerFollowing")
+  followers    Follow[] @relation("TipsterFollowers")
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -51,4 +59,18 @@ model Tip {
 
   @@index([tipsterId, createdAt])
   @@index([result])
+}
+
+model Follow {
+  id         String   @id @default(uuid())
+  followerId String
+  tipsterId  String
+
+  follower   User     @relation("CustomerFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  tipster    User     @relation("TipsterFollowers", fields: [tipsterId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([followerId, tipsterId])
+  @@index([tipsterId])
 }
