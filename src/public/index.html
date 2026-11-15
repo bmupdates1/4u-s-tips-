@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,20 +7,29 @@
   <title>4U'S TIPS | Admin Dashboard</title>
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       background: #071b13;
       color: white;
     }
+
     header {
       background: #103d2b;
       padding: 20px;
       border-bottom: 2px solid #d4af37;
     }
+
     header h1 { margin: 0; color: #d4af37; }
     header p { margin-bottom: 0; }
-    main { padding: 20px; max-width: 900px; margin: auto; }
+
+    main {
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+
     .card {
       background: #123b2b;
       padding: 20px;
@@ -27,7 +37,9 @@
       border-radius: 12px;
       border: 1px solid #315b45;
     }
+
     h2 { color: #e5c45b; }
+
     input, select, button {
       width: 100%;
       padding: 13px;
@@ -36,21 +48,33 @@
       border: 0;
       font-size: 16px;
     }
+
     button {
       background: #d4af37;
       color: #071b13;
       font-weight: bold;
       cursor: pointer;
     }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .tip {
       background: #09291d;
       padding: 13px;
       border-radius: 8px;
-      margin: 10px 0;
+      margin: 12px 0;
+      border: 1px solid #315b45;
     }
-    #message { color: #e5c45b; }
+
+    .tip p { line-height: 1.6; }
+    #message, #tipMessage { color: #e5c45b; }
+    .small { color: #c9d7ce; font-size: 13px; }
   </style>
 </head>
+
 <body>
   <header>
     <h1>4U'S TIPS</h1>
@@ -69,14 +93,18 @@
     <section class="card" id="dashboard" hidden>
       <h2>Welcome, Super Admin</h2>
       <button onclick="logout()">LOGOUT</button>
+
       <h2>Add New Tip</h2>
+
       <input id="match" placeholder="Match name">
       <input id="prediction" placeholder="Prediction">
       <input id="odds" type="number" step="any" placeholder="Odds (optional)">
+
       <select id="category">
         <option value="FREE">FREE</option>
         <option value="PREMIUM">PREMIUM</option>
       </select>
+
       <button onclick="addTip()">PUBLISH TIP</button>
       <p id="tipMessage"></p>
 
@@ -92,6 +120,7 @@ let token = "";
 async function login() {
   const message = document.getElementById("message");
   message.textContent = "Logging in...";
+
   try {
     const response = await fetch(API + "/api/auth/login", {
       method: "POST",
@@ -101,13 +130,21 @@ async function login() {
         password: document.getElementById("password").value
       })
     });
+
     const data = await response.json();
+
     if (!response.ok) throw new Error(data.error || "Login failed");
+
+    if (data.user.role !== "SUPER_ADMIN") {
+      throw new Error("Super Admin access only");
+    }
+
     token = data.token;
-    if (data.user.role !== "SUPER_ADMIN") throw new Error("Super Admin access only");
     document.getElementById("login").hidden = true;
     document.getElementById("dashboard").hidden = false;
-    loadTips();
+
+    await loadTips();
+
   } catch (error) {
     message.textContent = error.message;
   }
@@ -115,21 +152,93 @@ async function login() {
 
 async function loadTips() {
   const area = document.getElementById("tips");
+  area.textContent = "Loading tips...";
+
   try {
     const response = await fetch(API + "/api/tips", {
       headers: { Authorization: "Bearer " + token }
     });
+
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not load tips");
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load tips");
+    }
+
     area.innerHTML = "";
-    if (!data.tips.length) area.textContent = "No tips published yet.";
+
+    if (!data.tips.length) {
+      area.textContent = "No tips published yet.";
+      return;
+    }
+
     data.tips.forEach(tip => {
       const item = document.createElement("div");
       item.className = "tip";
-      item.textContent = tip.matchName + " | " + tip.prediction +
-        " | " + tip.category + " | " + tip.result;
+
+      const details = document.createElement("p");
+      details.textContent =
+        tip.matchName + " | " +
+        tip.prediction + " | " +
+        tip.category + " | Result: " + tip.result;
+
+      const resultSelect = document.createElement("select");
+
+      ["PENDING", "WON", "LOST", "VOID"].forEach(result => {
+        const option = document.createElement("option");
+        option.value = result;
+        option.textContent = result;
+
+        if (tip.result === result) {
+          option.selected = true;
+        }
+
+        resultSelect.appendChild(option);
+      });
+
+      const updateButton = document.createElement("button");
+      updateButton.textContent = "UPDATE RESULT";
+
+      updateButton.onclick = async () => {
+        updateButton.disabled = true;
+
+        try {
+          const updateResponse = await fetch(
+            API + "/api/tips/" + encodeURIComponent(tip.id) + "/result",
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+              },
+              body: JSON.stringify({
+                result: resultSelect.value
+              })
+            }
+          );
+
+          const updateData = await updateResponse.json();
+
+          if (!updateResponse.ok) {
+            throw new Error(updateData.error || "Update failed");
+          }
+
+          alert("Result updated successfully!");
+          await loadTips();
+
+        } catch (error) {
+          alert(error.message);
+          updateButton.disabled = false;
+        }
+      };
+
+      item.appendChild(details);
+      item.appendChild(resultSelect);
+      item.appendChild(updateButton);
+
       area.appendChild(item);
     });
+
   } catch (error) {
     area.textContent = error.message;
   }
@@ -138,13 +247,16 @@ async function loadTips() {
 async function addTip() {
   const message = document.getElementById("tipMessage");
   message.textContent = "Publishing...";
+
   try {
     const body = {
       matchName: document.getElementById("match").value.trim(),
       prediction: document.getElementById("prediction").value.trim(),
       category: document.getElementById("category").value
     };
+
     const odds = document.getElementById("odds").value;
+
     if (odds !== "") body.odds = Number(odds);
 
     const response = await fetch(API + "/api/tips", {
@@ -155,13 +267,21 @@ async function addTip() {
       },
       body: JSON.stringify(body)
     });
+
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not publish tip");
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not publish tip");
+    }
+
     message.textContent = "Tip published successfully!";
+
     document.getElementById("match").value = "";
     document.getElementById("prediction").value = "";
     document.getElementById("odds").value = "";
-    loadTips();
+
+    await loadTips();
+
   } catch (error) {
     message.textContent = error.message;
   }
@@ -172,6 +292,7 @@ function logout() {
   document.getElementById("dashboard").hidden = true;
   document.getElementById("login").hidden = false;
   document.getElementById("password").value = "";
+  document.getElementById("message").textContent = "";
 }
 </script>
 </body>
