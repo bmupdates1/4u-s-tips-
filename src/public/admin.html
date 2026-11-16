@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4U'S TIPS | Admin Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #071b13;
+      color: white;
+    }
+    header {
+      background: #103b29;
+      padding: 22px;
+      border-bottom: 2px solid #d4af37;
+    }
+    header h1 { margin: 0; color: #d4af37; }
+    header p { margin-bottom: 0; }
+    main { padding: 20px; max-width: 1000px; margin: auto; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: #123c2b;
+      padding: 20px;
+      border: 1px solid #b99732;
+      border-radius: 12px;
+    }
+    .card h2 { color: #d4af37; font-size: 25px; }
+    .panel {
+      margin-top: 22px;
+      padding: 20px;
+      background: #103b29;
+      border-radius: 12px;
+    }
+    button {
+      background: #d4af37;
+      color: #071b13;
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 7px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>4U'S TIPS</h1>
+    <p>PREDICT SMARTER | SUPER ADMIN</p>
+  </header>
+
+  <main>
+    <h2>Admin Dashboard</h2>
+
+    <div class="cards">
+      <div class="card">
+        <p>Total Users</p>
+        <h2>0</h2>
+      </div>
+      <div class="card">
+        <p>Total Tipsters</p>
+        <h2>0</h2>
+      </div>
+      <div class="card">
+        <p>Total Tips</p>
+        <h2>0</h2>
+      </div>
+      <div class="card">
+        <p>Premium Tips</p>
+        <h2>0</h2>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Welcome, Super Admin</h2>
+      <p>Manage users, tipsters and football predictions from one place.</p>
+      <button onclick="alert('Dashboard is ready for the next step!')">
+        Get Started
+      </button>
+    </div>
+  </main>
+</body>
+</html>
