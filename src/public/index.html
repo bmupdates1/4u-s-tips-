@@ -22,9 +22,6 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 .avatar{width:65px;height:65px;border-radius:50%;object-fit:cover;border:2px solid #d4af37;background:#063b2b}
 .tipster-info{flex:1;min-width:0}
 .tipster-info h3{margin:5px 0;color:#d4af37}
-.profile-header{text-align:center}
-.profile-header .avatar{width:100px;height:100px}
-.profile-link{color:#d4af37;cursor:pointer}
 </style>
 </head>
 <body>
@@ -68,7 +65,7 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 
 <div class="panel">
 <h2>TOP TIPSTERS</h2>
-<p>Fuata Tipsters unaowapenda. Bonyeza picha au jina kuona betting zao.</p>
+<p>Bonyeza picha au jina la Tipster kuona betting zake.</p>
 <div id="tipstersList">Loading tipsters...</div>
 </div>
 
@@ -108,7 +105,9 @@ async function register(){
    })
   });
   message.textContent="Account imetengenezwa! Sasa unaweza Login.";
- }catch(error){message.textContent=error.message;}
+ }catch(error){
+  message.textContent=error.message;
+ }
 }
 
 async function login(){
@@ -121,56 +120,89 @@ async function login(){
     password:document.getElementById("loginPassword").value
    })
   });
+
   token=result.token;
+
   const me=await request("/api/auth/me");
+
   if(me.user.role!=="CUSTOMER"){
    token="";
    throw new Error("Tumia akaunti ya Customer.");
   }
+
+  sessionStorage.setItem("4u_customer_token",token);
+
   document.getElementById("authSection").classList.add("hidden");
   document.getElementById("customerSection").classList.remove("hidden");
   document.getElementById("welcome").textContent="Welcome, "+me.user.username;
+
   await loadTips();
   await loadTipsters();
- }catch(error){token="";message.textContent=error.message;}
+
+ }catch(error){
+  token="";
+  sessionStorage.removeItem("4u_customer_token");
+  message.textContent=error.message;
+ }
 }
 
 async function loadTips(){
  const list=document.getElementById("tipsList");
  list.textContent="Loading...";
+
  try{
   const result=await request("/api/tips");
   const tips=result.tips||[];
   list.innerHTML="";
-  if(!tips.length){list.textContent="Hakuna FREE tips kwa sasa.";return;}
+
+  if(!tips.length){
+   list.textContent="Hakuna FREE tips kwa sasa.";
+   return;
+  }
+
   tips.forEach(tip=>{
    const card=document.createElement("div");
    card.className="tip";
+
    const match=document.createElement("h3");
    match.textContent=tip.matchName;
+
    const prediction=document.createElement("p");
    prediction.textContent="Prediction: "+tip.prediction;
+
    const odds=document.createElement("p");
    odds.textContent="Odds: "+(tip.odds??"Not set");
+
    const tipster=document.createElement("p");
    tipster.textContent="Tipster: "+(tip.tipster?.username||"Unknown");
+
    card.append(match,prediction,odds,tipster);
    list.appendChild(card);
   });
- }catch(error){list.textContent=error.message;}
+
+ }catch(error){
+  list.textContent=error.message;
+ }
 }
 
 async function loadTipsters(){
  const list=document.getElementById("tipstersList");
  list.textContent="Loading tipsters...";
+
  try{
   const result=await request("/api/tipsters");
   const tipsters=result.tipsters||[];
   list.innerHTML="";
-  if(!tipsters.length){list.textContent="Hakuna Tipsters waliopatikana kwa sasa.";return;}
+
+  if(!tipsters.length){
+   list.textContent="Hakuna Tipsters waliopatikana kwa sasa.";
+   return;
+  }
+
   tipsters.forEach(tipster=>{
    const card=document.createElement("div");
    card.className="tip";
+
    const row=document.createElement("div");
    row.className="tipster-card";
    row.onclick=()=>openTipster(tipster.id);
@@ -179,19 +211,26 @@ async function loadTipsters(){
    img.className="avatar";
    img.src=tipster.profileImage||"https://placehold.co/100x100/063b2b/d4af37?text=4U";
    img.alt="Tipster profile";
-   img.onerror=()=>{img.src="https://placehold.co/100x100/063b2b/d4af37?text=4U";};
+   img.onerror=()=>{
+    img.src="https://placehold.co/100x100/063b2b/d4af37?text=4U";
+   };
 
    const info=document.createElement("div");
    info.className="tipster-info";
+
    const name=document.createElement("h3");
    name.textContent=tipster.username;
+
    const followers=document.createElement("p");
    followers.className="stats";
    followers.textContent="Followers: "+tipster.followers;
+
    const accuracy=document.createElement("p");
    accuracy.textContent="Winning probability: "+tipster.accuracy+"%";
+
    const wins=document.createElement("p");
    wins.textContent="Wins: "+tipster.wins+" | Losses: "+tipster.losses;
+
    info.append(name,followers,accuracy,wins);
    row.append(img,info);
 
@@ -201,15 +240,18 @@ async function loadTipsters(){
     event.stopPropagation();
     changeFollow(tipster.id,tipster.isFollowing);
    };
+
    card.append(row,button);
    list.appendChild(card);
   });
- }catch(error){list.textContent=error.message;}
+
+ }catch(error){
+  list.textContent=error.message;
+ }
 }
 
-async function openTipster(id){
- const url="tipster-profile.html?id="+encodeURIComponent(id);
- window.location.href=url;
+function openTipster(id){
+ window.location.href="tipster-profile.html?id="+encodeURIComponent(id);
 }
 
 async function changeFollow(id,isFollowing){
@@ -218,11 +260,15 @@ async function changeFollow(id,isFollowing){
    method:isFollowing?"DELETE":"POST"
   });
   await loadTipsters();
- }catch(error){alert(error.message);}
+ }catch(error){
+  alert(error.message);
+ }
 }
 
 function logout(){
  token="";
+ sessionStorage.removeItem("4u_customer_token");
+
  document.getElementById("customerSection").classList.add("hidden");
  document.getElementById("authSection").classList.remove("hidden");
  document.getElementById("loginPassword").value="";
