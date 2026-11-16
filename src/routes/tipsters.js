@@ -7,7 +7,7 @@ const router = Router();
 
 router.use(requireAuth);
 
-// List all approved tipsters and leaderboard statistics
+// List tipsters ordered by highest winning probability
 router.get("/", async (req, res) => {
   try {
     const tipsters = await prisma.user.findMany({
@@ -81,17 +81,19 @@ router.get("/", async (req, res) => {
       };
     });
 
+    // Highest winning probability appears first
     results.sort((a, b) =>
-      b.followers - a.followers ||
       b.accuracy - a.accuracy ||
-      b.wins - a.wins
+      b.wins - a.wins ||
+      b.followers - a.followers
     );
 
     res.json({
       tipsters: results
     });
 
-  } catch {
+  } catch (error) {
+    console.error("Tipsters error:", error);
     res.status(500).json({
       error: "Could not load tipsters"
     });
@@ -165,7 +167,8 @@ router.get("/:id", async (req, res) => {
       }
     });
 
-  } catch {
+  } catch (error) {
+    console.error("Tipster profile error:", error);
     res.status(500).json({
       error: "Could not load tipster profile"
     });
