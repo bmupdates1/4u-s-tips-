@@ -3,12 +3,18 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+
 import authRoutes from "./routes/auth.js";
 import tipsRoutes from "./routes/tips.js";
 import followsRoutes from "./routes/follows.js";
 import tipstersRoutes from "./routes/tipsters.js";
+import usersRoutes from "./routes/users.js";
 
-if (!process.env.DATABASE_URL || !process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+if (
+  !process.env.DATABASE_URL ||
+  !process.env.JWT_SECRET ||
+  process.env.JWT_SECRET.length < 32
+) {
   throw new Error("Set DATABASE_URL and a JWT_SECRET of at least 32 characters in .env");
 }
 
@@ -41,6 +47,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tips", tipsRoutes);
 app.use("/api/follows", followsRoutes);
 app.use("/api/tipsters", tipstersRoutes);
+app.use("/api/users", usersRoutes);
 
 const port = Number(process.env.PORT || 4000);
 
