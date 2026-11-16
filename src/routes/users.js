@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { prisma } from "../db.js";
 import {
   requireAuth,
@@ -11,6 +12,7 @@ const router = Router();
 router.use(requireAuth);
 router.use(requireSuperAdmin);
 
+// GET ALL USERS
 router.get("/", async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -34,6 +36,7 @@ router.get("/", async (req, res) => {
   }
 });
 
+// CHANGE USER ROLE
 router.patch("/:id/role", async (req, res) => {
   const schema = z.object({
     role: z.enum(["CUSTOMER", "TIPSTER"])
@@ -79,6 +82,58 @@ router.patch("/:id/role", async (req, res) => {
     console.error(error);
     return res.status(500).json({
       error: "Could not update user role"
+    });
+  }
+});
+
+// RESET USER PASSWORD
+router.patch("/:id/password", async (req, res) => {
+  const schema = z.object({
+    newPassword: z.string().min(12).max(128)
+  });
+
+  const parsed = schema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "Password must contain at least 12 characters"
+    });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found"
+      });
+    }
+
+    if (user.role === "SUPER_ADMIN") {
+      return res.status(403).json({
+        error: "Cannot reset Super Admin password here"
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(
+      parsed.data.newPassword,
+      12
+    );
+
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { passwordHash }
+    });
+
+    return res.json({
+      message: "Password reset successfully"
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: "Could not reset password"
     });
   }
 });
