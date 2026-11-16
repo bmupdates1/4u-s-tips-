@@ -1,3 +1,4 @@
+
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -15,10 +16,15 @@ if (
   !process.env.JWT_SECRET ||
   process.env.JWT_SECRET.length < 32
 ) {
-  throw new Error("Set DATABASE_URL and a JWT_SECRET of at least 32 characters in .env");
+  throw new Error(
+    "Set DATABASE_URL and a JWT_SECRET of at least 32 characters in .env"
+  );
 }
 
 const app = express();
+
+// Render proxy configuration
+app.set("trust proxy", 1);
 
 app.use(helmet({
   contentSecurityPolicy: false
