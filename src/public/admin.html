@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,25 +19,27 @@
       border-bottom: 2px solid #d4af37;
     }
     header h1 { margin: 0; color: #d4af37; }
-    header p { margin-bottom: 0; }
     main { padding: 20px; max-width: 1000px; margin: auto; }
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 14px;
     }
-    .card {
+    .card, .panel {
       background: #123c2b;
       padding: 20px;
       border: 1px solid #b99732;
       border-radius: 12px;
+      margin-bottom: 15px;
     }
     .card h2 { color: #d4af37; font-size: 25px; }
-    .panel {
-      margin-top: 22px;
-      padding: 20px;
-      background: #103b29;
-      border-radius: 12px;
+    input {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      margin: 12px 0;
+      border-radius: 7px;
+      border: 1px solid #d4af37;
     }
     button {
       background: #d4af37;
@@ -45,7 +48,10 @@
       padding: 12px 18px;
       border-radius: 7px;
       font-weight: bold;
+      cursor: pointer;
     }
+    #dashboard { display: none; }
+    #message { color: #ffd76a; }
   </style>
 </head>
 <body>
@@ -55,34 +61,132 @@
   </header>
 
   <main>
-    <h2>Admin Dashboard</h2>
+    <section id="login" class="panel">
+      <h2>Super Admin Login</h2>
+      <input id="username" placeholder="Username">
+      <input id="password" type="password" placeholder="Password">
+      <button onclick="loginAdmin()">Login</button>
+      <p id="message"></p>
+    </section>
 
-    <div class="cards">
-      <div class="card">
-        <p>Total Users</p>
-        <h2>0</h2>
-      </div>
-      <div class="card">
-        <p>Total Tipsters</p>
-        <h2>0</h2>
-      </div>
-      <div class="card">
-        <p>Total Tips</p>
-        <h2>0</h2>
-      </div>
-      <div class="card">
-        <p>Premium Tips</p>
-        <h2>0</h2>
-      </div>
-    </div>
+    <section id="dashboard">
+      <h2>Admin Dashboard</h2>
 
-    <div class="panel">
-      <h2>Welcome, Super Admin</h2>
-      <p>Manage users, tipsters and football predictions from one place.</p>
-      <button onclick="alert('Dashboard is ready for the next step!')">
-        Get Started
-      </button>
-    </div>
+      <div class="cards">
+        <div class="card">
+          <p>Total Users</p>
+          <h2 id="totalUsers">...</h2>
+        </div>
+        <div class="card">
+          <p>Total Tipsters</p>
+          <h2 id="totalTipsters">...</h2>
+        </div>
+        <div class="card">
+          <p>Total Tips</p>
+          <h2 id="totalTips">...</h2>
+        </div>
+        <div class="card">
+          <p>Premium Tips</p>
+          <h2 id="premiumTips">...</h2>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Welcome, Super Admin</h2>
+        <p>Manage users, tipsters and football predictions.</p>
+        <button onclick="loadDashboard()">Refresh Data</button>
+        <button onclick="logout()">Logout</button>
+      </div>
+      <p id="dashboardMessage"></p>
+    </section>
   </main>
+
+  <script>
+    const API = "https://fouru-s-tips.onrender.com";
+    let adminToken = "";
+
+    async function getData(path) {
+      const response = await fetch(API + path, {
+        headers: {
+          "Authorization": "Bearer " + adminToken
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Imeshindikana kupata taarifa.");
+      }
+
+      return data;
+    }
+
+    async function loginAdmin() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const message = document.getElementById("message");
+
+      message.textContent = "Inaingia...";
+
+      try {
+        const response = await fetch(API + "/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Login imeshindikana.");
+        }
+
+        adminToken = data.token;
+
+        await loadDashboard();
+
+        document.getElementById("login").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+      } catch (error) {
+        adminToken = "";
+        message.textContent = error.message;
+      }
+    }
+
+    async function loadDashboard() {
+      const status = document.getElementById("dashboardMessage");
+      status.textContent = "Inapakia taarifa...";
+
+      try {
+        const [usersData, tipstersData, tipsData] = await Promise.all([
+          getData("/api/users"),
+          getData("/api/tipsters"),
+          getData("/api/tips")
+        ]);
+
+        const users = usersData.users || [];
+        const tipsters = tipstersData.tipsters || [];
+        const tips = tipsData.tips || [];
+
+        document.getElementById("totalUsers").textContent = users.length;
+        document.getElementById("totalTipsters").textContent = tipsters.length;
+        document.getElementById("totalTips").textContent = tips.length;
+        document.getElementById("premiumTips").textContent =
+          tips.filter(tip => tip.category === "PREMIUM").length;
+
+        status.textContent = "Taarifa zimepatikana.";
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    }
+
+    function logout() {
+      adminToken = "";
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("login").style.display = "block";
+      document.getElementById("password").value = "";
+      document.getElementById("message").textContent = "";
+    }
+  </script>
 </body>
 </html>
