@@ -1,256 +1,139 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4U'S TIPS</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial;background:#071b15;color:white}
-header{background:#063b2b;border-bottom:2px solid #d4af37;padding:20px;text-align:center}
-h1,h2{color:#d4af37}
-main{max-width:650px;margin:auto;padding:18px}
-.panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
-input,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
-button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
-.secondary{background:#063b2b;color:white;border:1px solid #d4af37}
-.hidden{display:none}
-.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
-.message{color:#d4af37}
-.stats{color:#d4af37;font-size:14px}
-</style>
-</head>
-<body>
-<header>
-<h1>4U'S TIPS</h1>
-<p>PREDICT SMARTER</p>
-</header>
 
-<main>
-<section id="authSection">
-<div class="panel">
-<h2>Customer Login</h2>
-<input id="loginUsername" placeholder="Username">
-<input id="loginPassword" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<p id="loginMessage" class="message"></p>
-</div>
+import { Router } from "express";
+import { prisma } from "../db.js";
+import { requireAuth } from "../middleware/auth.js";
 
-<div class="panel">
-<h2>Create Customer Account</h2>
-<input id="registerUsername" placeholder="Choose username">
-<input id="registerEmail" type="email" placeholder="Email address">
-<input id="registerPassword" type="password" placeholder="Create password (12 characters minimum)">
-<button onclick="register()">Register</button>
-<p id="registerMessage" class="message"></p>
-</div>
-</section>
+const router = Router();
 
-<section id="customerSection" class="hidden">
-<div class="panel">
-<h2 id="welcome">Welcome</h2>
-<button class="secondary" onclick="loadTips()">Refresh Tips</button>
-<button class="secondary" onclick="loadTipsters()">Refresh Tipsters</button>
-<button onclick="logout()">Logout</button>
-</div>
+router.use(requireAuth);
 
-<div class="panel">
-<h2>FREE TIPS</h2>
-<div id="tipsList">Loading tips...</div>
-</div>
+router.get("/", async (req, res) => {
+  try {
+    const tipsters = await prisma.user.findMany({
+      where: { role: "TIPSTER", isActive: true },
+      select: {
+        id: true,
+        username: true,
+        profileImage: true,
+        _count: { select: { followers: true } },
+        tips: { select: { result: true } }
+      }
+    });
 
-<div class="panel">
-<h2>TOP TIPSTERS</h2>
-<p>Fuata Tipsters unaowapenda.</p>
-<div id="tipstersList">Loading tipsters...</div>
-</div>
+    const following = await prisma.follow.findMany({
+      where: { followerId: req.user.id },
+      select: { tipsterId: true }
+    });
 
-<div class="panel">
-<h2>PREMIUM TIPS</h2>
-<p>Premium tips zinahitaji malipo na usajili. Mfumo wa malipo utaunganishwa baadaye.</p>
-</div>
-</section>
-</main>
+    const followingIds = new Set(
+      following.map(item => item.tipsterId)
+    );
 
-<script>
-const API=window.location.origin;
-let token="";
+    const results = tipsters.map(tipster => {
+      const wins = tipster.tips.filter(t => t.result === "WON").length;
+      const losses = tipster.tips.filter(t => t.result === "LOST").length;
+      const decided = wins + losses;
 
-async function request(path,options={}){
- const response=await fetch(API+path,{
-  ...options,
-  headers:{
-   "Content-Type":"application/json",
-   ...(token?{"Authorization":"Bearer "+token}:{})
+      return {
+        id: tipster.id,
+        username: tipster.username,
+        profileImage: tipster.profileImage,
+        followers: tipster._count.followers,
+        wins,
+        losses,
+        accuracy: decided > 0
+          ? Number(((wins / decided) * 100).toFixed(2))
+          : 0,
+        isFollowing: followingIds.has(tipster.id)
+      };
+    });
+
+    results.sort((a, b) =>
+      b.accuracy - a.accuracy ||
+      b.wins - a.wins ||
+      b.followers - a.followers
+    );
+
+    return res.json({ tipsters: results });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Could not load tipsters" });
   }
- });
- const data=await response.json();
- if(!response.ok)throw new Error(data.error||"Request failed");
- return data;
-}
+});
 
-async function register(){
- const message=document.getElementById("registerMessage");
- try{
-  await request("/api/auth/register",{
-   method:"POST",
-   body:JSON.stringify({
-    username:document.getElementById("registerUsername").value.trim(),
-    email:document.getElementById("registerEmail").value.trim(),
-    password:document.getElementById("registerPassword").value
-   })
-  });
-  message.textContent="Account imetengenezwa! Sasa unaweza Login.";
- }catch(error){
-  message.textContent=error.message;
- }
-}
+router.get("/:id", async (req, res) => {
+  try {
+    const tipster = await prisma.user.findFirst({
+      where: {
+        id: req.params.id,
+        role: "TIPSTER",
+        isActive: true
+      },
+      select: {
+        id: true,
+        username: true,
+        profileImage: true,
+        _count: { select: { followers: true } },
+        tips: {
+          where: req.user.role === "CUSTOMER"
+            ? { category: "FREE" }
+            : {},
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            matchName: true,
+            prediction: true,
+            odds: true,
+            category: true,
+            result: true,
+            kickoffAt: true,
+            createdAt: true
+          }
+        }
+      }
+    });
 
-async function login(){
- const message=document.getElementById("loginMessage");
- try{
-  const result=await request("/api/auth/login",{
-   method:"POST",
-   body:JSON.stringify({
-    username:document.getElementById("loginUsername").value.trim(),
-    password:document.getElementById("loginPassword").value
-   })
-  });
+    if (!tipster) {
+      return res.status(404).json({ error: "Tipster not found" });
+    }
 
-  token=result.token;
-  const me=await request("/api/auth/me");
+    const allResults = await prisma.tip.findMany({
+      where: { tipsterId: tipster.id },
+      select: { result: true }
+    });
 
-  if(me.user.role!=="CUSTOMER"){
-   token="";
-   throw new Error("Tumia akaunti ya Customer.");
+    const wins = allResults.filter(t => t.result === "WON").length;
+    const losses = allResults.filter(t => t.result === "LOST").length;
+    const decided = wins + losses;
+
+    const follow = await prisma.follow.findUnique({
+      where: {
+        followerId_tipsterId: {
+          followerId: req.user.id,
+          tipsterId: tipster.id
+        }
+      }
+    });
+
+    return res.json({
+      tipster: {
+        id: tipster.id,
+        username: tipster.username,
+        profileImage: tipster.profileImage,
+        followers: tipster._count.followers,
+        wins,
+        losses,
+        accuracy: decided > 0
+          ? Number(((wins / decided) * 100).toFixed(2))
+          : 0,
+        isFollowing: Boolean(follow),
+        tips: tipster.tips
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Could not load tipster profile" });
   }
+});
 
-  document.getElementById("authSection").classList.add("hidden");
-  document.getElementById("customerSection").classList.remove("hidden");
-  document.getElementById("welcome").textContent="Welcome, "+me.user.username;
-
-  await loadTips();
-  await loadTipsters();
-
- }catch(error){
-  token="";
-  message.textContent=error.message;
- }
-}
-
-async function loadTips(){
- const list=document.getElementById("tipsList");
- list.textContent="Loading...";
-
- try{
-  const result=await request("/api/tips");
-  const tips=result.tips||[];
-  list.innerHTML="";
-
-  if(!tips.length){
-   list.textContent="Hakuna FREE tips kwa sasa.";
-   return;
-  }
-
-  tips.forEach(tip=>{
-   const card=document.createElement("div");
-   card.className="tip";
-
-   const match=document.createElement("h3");
-   match.textContent=tip.matchName;
-
-   const prediction=document.createElement("p");
-   prediction.textContent="Prediction: "+tip.prediction;
-
-   const odds=document.createElement("p");
-   odds.textContent="Odds: "+(tip.odds??"Not set");
-
-   const tipster=document.createElement("p");
-   tipster.textContent="Tipster: "+(tip.tipster?.username||"Unknown");
-
-   card.append(match,prediction,odds,tipster);
-   list.appendChild(card);
-  });
-
- }catch(error){
-  list.textContent=error.message;
- }
-}
-
-async function loadTipsters(){
- const list=document.getElementById("tipstersList");
- list.textContent="Loading tipsters...";
-
- try{
-  const result=await request("/api/tipsters");
-  const tipsters=result.tipsters||[];
-  list.innerHTML="";
-
-  if(!tipsters.length){
-   list.textContent="Hakuna Tipsters waliopatikana kwa sasa.";
-   return;
-  }
-
-  tipsters.forEach(tipster=>{
-   const card=document.createElement("div");
-   card.className="tip";
-
-   const name=document.createElement("h3");
-   name.textContent=tipster.username;
-
-   const followers=document.createElement("p");
-   followers.className="stats";
-   followers.textContent="Followers: "+tipster.followers;
-
-   const wins=document.createElement("p");
-   wins.textContent="Wins: "+tipster.wins+" | Losses: "+tipster.losses;
-
-   const accuracy=document.createElement("p");
-   accuracy.textContent="Accuracy: "+tipster.accuracy+"%";
-
-   const button=document.createElement("button");
-   button.textContent=tipster.isFollowing?"Unfollow":"Follow";
-
-   button.onclick=()=>changeFollow(
-    tipster.id,
-    tipster.isFollowing
-   );
-
-   card.append(name,followers,wins,accuracy,button);
-   list.appendChild(card);
-  });
-
- }catch(error){
-  list.textContent=error.message;
- }
-}
-
-async function changeFollow(tipsterId,isFollowing){
- try{
-  if(isFollowing){
-   await request("/api/follows/"+encodeURIComponent(tipsterId),{
-    method:"DELETE"
-   });
-  }else{
-   await request("/api/follows/"+encodeURIComponent(tipsterId),{
-    method:"POST"
-   });
-  }
-
-  await loadTipsters();
-
- }catch(error){
-  alert(error.message);
- }
-}
-
-function logout(){
- token="";
- document.getElementById("customerSection").classList.add("hidden");
- document.getElementById("authSection").classList.remove("hidden");
- document.getElementById("loginPassword").value="";
- document.getElementById("loginMessage").textContent="Umetoka kwenye akaunti.";
-}
-</script>
-</body>
-</html>
+export default router;
