@@ -1,4 +1,6 @@
+
 const API_BASE_URL = "https://v3.football.api-sports.io";
+const TIMEZONE = "Africa/Dar_es_Salaam";
 
 async function footballRequest(params) {
   const apiKey = process.env.FOOTBALL_API_KEY;
@@ -35,14 +37,49 @@ async function footballRequest(params) {
   return data.response || [];
 }
 
+function getTanzaniaDate(offsetDays = 0) {
+  const now = new Date();
+
+  const dateInTanzania = new Date(
+    now.toLocaleString("en-US", { timeZone: TIMEZONE })
+  );
+
+  dateInTanzania.setDate(dateInTanzania.getDate() + offsetDays);
+
+  const year = dateInTanzania.getFullYear();
+  const month = String(dateInTanzania.getMonth() + 1).padStart(2, "0");
+  const day = String(dateInTanzania.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export async function getFixtureById(fixtureId) {
   const fixtures = await footballRequest({ id: fixtureId });
   return fixtures[0] || null;
 }
 
 export async function getNextFixtures() {
-  return footballRequest({
-    next: "99",
-    timezone: "Africa/Dar_es_Salaam"
-  });
+  const today = getTanzaniaDate(0);
+  const tomorrow = getTanzaniaDate(1);
+
+  const [todayFixtures, tomorrowFixtures] = await Promise.all([
+    footballRequest({
+      date: today,
+      timezone: TIMEZONE
+    }),
+    footballRequest({
+      date: tomorrow,
+      timezone: TIMEZONE
+    })
+  ]);
+
+  const allFixtures = [...todayFixtures, ...tomorrowFixtures];
+
+  const uniqueFixtures = [
+    ...new Map(
+      allFixtures.map(fixture => [fixture.fixture.id, fixture])
+    ).values()
+  ];
+
+  return uniqueFixtures;
 }
