@@ -4,35 +4,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>4U'S TIPS | Admin Dashboard</title>
+  <title>4U'S TIPS - Admin Dashboard</title>
+
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
+      padding: 16px;
+      background: #071b14;
+      color: #ffffff;
       font-family: Arial, sans-serif;
-      background: #071b13;
-      color: white;
     }
+
     header {
-      background: #103b29;
-      padding: 22px;
+      text-align: center;
+      padding: 20px 10px;
       border-bottom: 2px solid #d4af37;
+      margin-bottom: 22px;
     }
-    header h1 { margin: 0; color: #d4af37; }
-    main { padding: 20px; max-width: 1000px; margin: auto; }
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 14px;
+
+    header h1 {
+      color: #d4af37;
+      margin: 0;
+      font-size: 28px;
     }
-    .card, .panel {
-      background: #123c2b;
-      padding: 20px;
-      border: 1px solid #b99732;
+
+    header p {
+      color: #ffffff;
+      letter-spacing: 3px;
+      font-size: 12px;
+    }
+
+    .panel {
+      background: #102b20;
+      border: 1px solid #315b43;
       border-radius: 12px;
-      margin-bottom: 15px;
+      padding: 17px;
+      margin-bottom: 18px;
     }
-    .card h2 { color: #d4af37; font-size: 25px; }
+
+    h2 {
+      color: #d4af37;
+      font-size: 20px;
+    }
+
     input {
       display: block;
       width: 100%;
@@ -40,255 +58,538 @@
       margin: 12px 0;
       border-radius: 7px;
       border: 1px solid #d4af37;
+      background: #071b14;
+      color: white;
+      font-size: 16px;
     }
+
     button {
       background: #d4af37;
-      color: #071b13;
-      border: 0;
-      padding: 10px 14px;
+      color: #071b14;
+      border: none;
+      padding: 12px 16px;
       border-radius: 7px;
       font-weight: bold;
       cursor: pointer;
-      margin: 4px;
+      margin: 5px 3px 5px 0;
     }
-    #dashboard { display: none; }
-    #message, #dashboardMessage, #usersMessage {
+
+    button.secondary {
+      background: #315b43;
+      color: white;
+    }
+
+    button.danger {
+      background: #a83232;
+      color: white;
+    }
+
+    #dashboard {
+      display: none;
+    }
+
+    #message,
+    #dashboardMessage,
+    #usersMessage,
+    #fixturesMessage {
       color: #ffd76a;
-    }
-    .user {
-      background: #071b13;
-      border: 1px solid #b99732;
-      border-radius: 8px;
-      padding: 14px;
-      margin: 12px 0;
       overflow-wrap: anywhere;
     }
-    .user p { margin: 7px 0; }
-    .role { color: #d4af37; font-weight: bold; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      background: #102b20;
+      border: 1px solid #d4af37;
+      border-radius: 10px;
+      padding: 15px 8px;
+      text-align: center;
+    }
+
+    .stat h3 {
+      color: #d4af37;
+      font-size: 25px;
+      margin: 5px;
+    }
+
+    .stat p {
+      font-size: 13px;
+      margin: 5px;
+    }
+
+    .user {
+      background: #071b14;
+      border: 1px solid #315b43;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      overflow-wrap: anywhere;
+    }
+
+    .role {
+      color: #ffd76a;
+      font-weight: bold;
+    }
+
+    .fixture {
+      background: #071b14;
+      border: 1px solid #315b43;
+      border-radius: 10px;
+      padding: 13px;
+      margin-top: 12px;
+    }
+
+    .teams {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .team {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .team img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 7px;
+    }
+
+    .team-name {
+      font-size: 13px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .versus {
+      color: #d4af37;
+      font-weight: bold;
+    }
+
+    .fixture-info {
+      border-top: 1px solid #315b43;
+      margin-top: 12px;
+      padding-top: 8px;
+      font-size: 13px;
+      color: #dddddd;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (min-width: 700px) {
+      body {
+        max-width: 1000px;
+        margin: auto;
+      }
+
+      .cards {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
   </style>
 </head>
+
 <body>
-  <header>
-    <h1>4U'S TIPS</h1>
-    <p>PREDICT SMARTER | SUPER ADMIN</p>
-  </header>
 
-  <main>
-    <section id="login" class="panel">
-      <h2>Super Admin Login</h2>
-      <input id="username" placeholder="Username">
-      <input id="password" type="password" placeholder="Password">
-      <button onclick="loginAdmin()">Login</button>
-      <p id="message"></p>
-    </section>
+<header>
+  <h1>4U'S TIPS</h1>
+  <p>PREDICT SMARTER</p>
+  <small>ADMIN DASHBOARD</small>
+</header>
 
-    <section id="dashboard">
-      <h2>Admin Dashboard</h2>
+<div class="panel" id="login">
+  <h2>Super Admin Login</h2>
 
-      <div class="cards">
-        <div class="card">
-          <p>Total Users</p>
-          <h2 id="totalUsers">...</h2>
-        </div>
-        <div class="card">
-          <p>Total Tipsters</p>
-          <h2 id="totalTipsters">...</h2>
-        </div>
-        <div class="card">
-          <p>Total Tips</p>
-          <h2 id="totalTips">...</h2>
-        </div>
-        <div class="card">
-          <p>Premium Tips</p>
-          <h2 id="premiumTips">...</h2>
-        </div>
-      </div>
+  <input
+    id="username"
+    type="text"
+    placeholder="Username"
+    autocomplete="username"
+  >
 
-      <div class="panel">
-        <h2>Manage Users</h2>
-        <p>View users and manage their roles.</p>
-        <button onclick="loadUsers()">Refresh Users</button>
-        <p id="usersMessage"></p>
-        <div id="usersList"></div>
-      </div>
+  <input
+    id="password"
+    type="password"
+    placeholder="Password"
+    autocomplete="current-password"
+  >
 
-      <div class="panel">
-        <h2>Welcome, Super Admin</h2>
-        <button onclick="loadDashboard()">Refresh Data</button>
-        <button onclick="logout()">Logout</button>
-      </div>
-      <p id="dashboardMessage"></p>
-    </section>
-  </main>
+  <button onclick="loginAdmin()">Login</button>
+  <p id="message"></p>
+</div>
 
-  <script>
-    const API = "https://fouru-s-tips.onrender.com";
-    let adminToken = "";
+<div id="dashboard">
 
-    async function getData(path) {
-      const response = await fetch(API + path, {
+  <div class="cards">
+    <div class="stat">
+      <p>Total Users</p>
+      <h3 id="totalUsers">0</h3>
+    </div>
+
+    <div class="stat">
+      <p>Total Tipsters</p>
+      <h3 id="totalTipsters">0</h3>
+    </div>
+
+    <div class="stat">
+      <p>Total Tips</p>
+      <h3 id="totalTips">0</h3>
+    </div>
+
+    <div class="stat">
+      <p>Premium Tips</p>
+      <h3 id="premiumTips">0</h3>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Manage Users</h2>
+    <p>View users and manage their roles.</p>
+
+    <button onclick="loadUsers()">Refresh Users</button>
+    <p id="usersMessage"></p>
+    <div id="usersList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Fixtures - Mechi za Leo na Kesho</h2>
+    <p>Mechi kutoka API-Football, zikiwa na logo za timu.</p>
+
+    <button onclick="loadFixtures()">Refresh Fixtures</button>
+    <p id="fixturesMessage"></p>
+    <div id="fixturesList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Welcome, Super Admin</h2>
+    <p>4U'S TIPS management dashboard.</p>
+
+    <button class="secondary" onclick="loadDashboard()">
+      Refresh Data
+    </button>
+
+    <button class="danger" onclick="logout()">
+      Logout
+    </button>
+
+    <p id="dashboardMessage"></p>
+  </div>
+
+</div>
+
+<script>
+  const API = "https://fouru-s-tips.onrender.com";
+
+  let adminToken = "";
+
+  async function getData(path) {
+    const response = await fetch(API + path, {
+      headers: {
+        Authorization: "Bearer " + adminToken
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Request failed");
+    }
+
+    return data;
+  }
+
+  async function loginAdmin() {
+    const message = document.getElementById("message");
+
+    message.textContent = "Inakagua login...";
+
+    try {
+      const response = await fetch(API + "/api/auth/login", {
+        method: "POST",
         headers: {
-          "Authorization": "Bearer " + adminToken
-        }
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: document.getElementById("username").value.trim(),
+          password: document.getElementById("password").value
+        })
       });
+
       const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.error || "Imeshindikana kupata taarifa.");
+        throw new Error(data.error || "Login failed");
       }
-      return data;
-    }
 
-    async function loginAdmin() {
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value;
-      const message = document.getElementById("message");
-      message.textContent = "Inaingia...";
+      adminToken = data.token;
 
-      try {
-        const response = await fetch(API + "/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await response.json();
+      const me = await getData("/api/auth/me");
 
-        if (!response.ok) throw new Error(data.error || "Login imeshindikana.");
-
-        adminToken = data.token;
-        const me = await getData("/api/auth/me");
-
-        if (me.user?.role !== "SUPER_ADMIN" && me.role !== "SUPER_ADMIN") {
-          throw new Error("Super Admin pekee anaruhusiwa.");
-        }
-
-        document.getElementById("login").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        await loadDashboard();
-        await loadUsers();
-      } catch (error) {
+      if (me.user?.role !== "SUPER_ADMIN") {
         adminToken = "";
-        message.textContent = error.message;
+        throw new Error("Super Admin pekee ndiye anayeruhusiwa.");
       }
+
+      document.getElementById("login").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+
+      await loadDashboard();
+      await loadUsers();
+      await loadFixtures();
+
+    } catch (error) {
+      message.textContent = error.message;
     }
+  }
 
-    async function loadDashboard() {
-      const status = document.getElementById("dashboardMessage");
-      status.textContent = "Inapakia taarifa...";
+  async function loadDashboard() {
+    const status = document.getElementById("dashboardMessage");
+    status.textContent = "Inapakia takwimu...";
 
-      try {
-        const [usersData, tipstersData, tipsData] = await Promise.all([
+    try {
+      const [usersData, tipstersData, tipsData] =
+        await Promise.all([
           getData("/api/users"),
           getData("/api/tipsters"),
           getData("/api/tips")
         ]);
 
-        const users = usersData.users || [];
-        const tipsters = tipstersData.tipsters || [];
-        const tips = tipsData.tips || [];
+      const users = usersData.users || [];
+      const tipsters = tipstersData.tipsters || [];
+      const tips = tipsData.tips || [];
 
-        document.getElementById("totalUsers").textContent = users.length;
-        document.getElementById("totalTipsters").textContent = tipsters.length;
-        document.getElementById("totalTips").textContent = tips.length;
-        document.getElementById("premiumTips").textContent =
-          tips.filter(tip => tip.category === "PREMIUM").length;
+      document.getElementById("totalUsers").textContent =
+        users.length;
 
-        status.textContent = "Taarifa zimepatikana.";
-      } catch (error) {
-        status.textContent = error.message;
-      }
+      document.getElementById("totalTipsters").textContent =
+        tipsters.length;
+
+      document.getElementById("totalTips").textContent =
+        tips.length;
+
+      document.getElementById("premiumTips").textContent =
+        tips.filter(tip => tip.category === "PREMIUM").length;
+
+      status.textContent = "Takwimu zimepakiwa.";
+
+    } catch (error) {
+      status.textContent = error.message;
     }
+  }
 
-    async function loadUsers() {
-      const list = document.getElementById("usersList");
-      const status = document.getElementById("usersMessage");
-      status.textContent = "Inapakia users...";
-      list.replaceChildren();
+  async function loadUsers() {
+    const status = document.getElementById("usersMessage");
+    const list = document.getElementById("usersList");
 
-      try {
-        const data = await getData("/api/users");
-        const users = data.users || [];
+    status.textContent = "Inapakia users...";
+    list.replaceChildren();
 
-        if (users.length === 0) {
-          status.textContent = "Hakuna users.";
-          return;
-        }
+    try {
+      const data = await getData("/api/users");
+      const users = data.users || [];
 
-        status.textContent = "Jumla ya users: " + users.length;
+      status.textContent = "Jumla ya users: " + users.length;
 
-        users.forEach(user => {
-          const card = document.createElement("div");
-          card.className = "user";
+      users.forEach(user => {
+        const card = document.createElement("div");
+        card.className = "user";
 
-          const name = document.createElement("p");
-          name.textContent = "Username: " + user.username;
+        const name = document.createElement("p");
+        name.textContent = "Username: " + user.username;
 
-          const email = document.createElement("p");
-          email.textContent = "Email: " + user.email;
+        const email = document.createElement("p");
+        email.textContent = "Email: " + user.email;
 
-          const role = document.createElement("p");
-          role.className = "role";
-          role.textContent = "Role: " + user.role;
+        const role = document.createElement("p");
+        role.className = "role";
+        role.textContent = "Role: " + user.role;
 
-          card.append(name, email, role);
+        card.append(name, email, role);
 
-          if (user.role !== "SUPER_ADMIN") {
-            const button = document.createElement("button");
-            const promote = user.role === "CUSTOMER";
-            button.textContent = promote ? "Promote to TIPSTER" : "Make CUSTOMER";
+        if (user.role !== "SUPER_ADMIN") {
+          const button = document.createElement("button");
 
-            button.onclick = () => changeRole(
-              user.id,
-              promote ? "TIPSTER" : "CUSTOMER"
-            );
-
-            card.appendChild(button);
+          if (user.role === "TIPSTER") {
+            button.textContent = "Make Customer";
+            button.className = "secondary";
+            button.onclick = () =>
+              changeRole(user.id, "CUSTOMER");
+          } else {
+            button.textContent = "Promote to Tipster";
+            button.onclick = () =>
+              changeRole(user.id, "TIPSTER");
           }
 
-          list.appendChild(card);
-        });
-      } catch (error) {
-        status.textContent = error.message;
-      }
+          card.appendChild(button);
+        }
+
+        list.appendChild(card);
+      });
+
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  }
+
+  async function changeRole(id, role) {
+    if (!confirm("Una uhakika unataka kubadilisha role?")) {
+      return;
     }
 
-    async function changeRole(userId, role) {
-      if (!confirm("Una uhakika unataka kubadilisha role kuwa " + role + "?")) {
+    try {
+      const response = await fetch(
+        API + "/api/users/" + encodeURIComponent(id) + "/role",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + adminToken
+          },
+          body: JSON.stringify({ role })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Role change failed");
+      }
+
+      await loadUsers();
+      await loadDashboard();
+
+    } catch (error) {
+      document.getElementById("usersMessage").textContent =
+        error.message;
+    }
+  }
+
+  async function loadFixtures() {
+    const status = document.getElementById("fixturesMessage");
+    const list = document.getElementById("fixturesList");
+
+    status.textContent = "Inapakia mechi za leo na kesho...";
+    list.replaceChildren();
+
+    try {
+      const data = await getData("/api/football/next");
+      const fixtures = data.fixtures || [];
+
+      if (fixtures.length === 0) {
+        status.textContent =
+          "Hakuna mechi zilizopatikana kwa leo na kesho.";
         return;
       }
 
-      const status = document.getElementById("usersMessage");
-      status.textContent = "Inabadilisha role...";
+      status.textContent = "Jumla ya mechi: " + fixtures.length;
 
-      try {
-        const response = await fetch(API + "/api/users/" +
-          encodeURIComponent(userId) + "/role", {
-          method: "PATCH",
-          headers: {
-            "Authorization": "Bearer " + adminToken,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ role })
-        });
+      fixtures.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "fixture";
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Role haijabadilika.");
+        const teams = document.createElement("div");
+        teams.className = "teams";
 
-        status.textContent = "Role imebadilika kikamilifu.";
-        await loadUsers();
-        await loadDashboard();
-      } catch (error) {
-        status.textContent = error.message;
-      }
+        const home = document.createElement("div");
+        home.className = "team";
+
+        const homeLogo = document.createElement("img");
+        homeLogo.alt = "Home team logo";
+        homeLogo.src = item.teams?.home?.logo || "";
+        homeLogo.onerror = function() {
+          this.style.display = "none";
+        };
+
+        const homeName = document.createElement("div");
+        homeName.className = "team-name";
+        homeName.textContent =
+          item.teams?.home?.name || "Home Team";
+
+        home.append(homeLogo, homeName);
+
+        const versus = document.createElement("div");
+        versus.className = "versus";
+        versus.textContent = "VS";
+
+        const away = document.createElement("div");
+        away.className = "team";
+
+        const awayLogo = document.createElement("img");
+        awayLogo.alt = "Away team logo";
+        awayLogo.src = item.teams?.away?.logo || "";
+        awayLogo.onerror = function() {
+          this.style.display = "none";
+        };
+
+        const awayName = document.createElement("div");
+        awayName.className = "team-name";
+        awayName.textContent =
+          item.teams?.away?.name || "Away Team";
+
+        away.append(awayLogo, awayName);
+
+        teams.append(home, versus, away);
+
+        const info = document.createElement("div");
+        info.className = "fixture-info";
+
+        const league = document.createElement("p");
+        league.textContent =
+          "Ligi: " + (item.league?.name || "Unknown") +
+          " - " + (item.league?.country || "");
+
+        const kickoff = document.createElement("p");
+        const date = item.fixture?.date
+          ? new Date(item.fixture.date)
+          : null;
+
+        kickoff.textContent = "Muda: " +
+          (date && !Number.isNaN(date.getTime())
+            ? date.toLocaleString("en-GB", {
+                timeZone: "Africa/Dar_es_Salaam",
+                dateStyle: "medium",
+                timeStyle: "short"
+              })
+            : "Unknown");
+
+        const matchStatus = document.createElement("p");
+        matchStatus.textContent =
+          "Hali: " +
+          (item.fixture?.status?.long || "Unknown");
+
+        info.append(league, kickoff, matchStatus);
+        card.append(teams, info);
+        list.appendChild(card);
+      });
+
+    } catch (error) {
+      status.textContent = error.message;
     }
+  }
 
-    function logout() {
-      adminToken = "";
-      document.getElementById("dashboard").style.display = "none";
-      document.getElementById("login").style.display = "block";
-      document.getElementById("password").value = "";
-      document.getElementById("message").textContent = "";
-      document.getElementById("usersList").replaceChildren();
-    }
-  </script>
+  function logout() {
+    adminToken = "";
+
+    document.getElementById("dashboard").style.display = "none";
+    document.getElementById("login").style.display = "block";
+    document.getElementById("password").value = "";
+    document.getElementById("message").textContent = "";
+    document.getElementById("usersList").replaceChildren();
+    document.getElementById("fixturesList").replaceChildren();
+  }
+</script>
+
 </body>
 </html>
