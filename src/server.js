@@ -10,7 +10,7 @@ import followsRoutes from "./routes/follows.js";
 import tipstersRoutes from "./routes/tipsters.js";
 import usersRoutes from "./routes/users.js";
 import footballRoutes from "./routes/football.js";
-
+import slipsRoutes from "./routes/slips.js";
 if (
   !process.env.DATABASE_URL ||
   !process.env.JWT_SECRET ||
@@ -55,6 +55,7 @@ app.use("/api/tipsters", tipstersRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/football", footballRoutes);
 
+app.use("/api/slips", slipsRoutes);
 const port = Number(process.env.PORT || 4000);
 
 app.listen(port, () => {
