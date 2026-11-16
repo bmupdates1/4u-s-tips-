@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { getFixtureById } from "../services/footballApi.js";
+import {
+  getFixtureById,
+  getNextFixtures
+} from "../services/footballApi.js";
+
 import {
   requireAuth,
   requireSuperAdmin
@@ -33,10 +37,27 @@ router.get("/fixture", async (req, res) => {
 
     return res.json({ fixture });
   } catch (error) {
-    console.error("Football API error:", error.message);
+    console.error(error.message);
 
     return res.status(502).json({
-      error: "Could not fetch fixture information"
+      error: "Could not fetch fixture"
+    });
+  }
+});
+
+router.get("/next", async (_req, res) => {
+  try {
+    const fixtures = await getNextFixtures();
+
+    return res.json({
+      total: fixtures.length,
+      fixtures
+    });
+  } catch (error) {
+    console.error(error.message);
+
+    return res.status(502).json({
+      error: "Could not fetch upcoming fixtures"
     });
   }
 });
