@@ -134,8 +134,8 @@ async function loadFixtures(){
 
   list.innerHTML="";
   fixtures.forEach(f=>{
-   const home=f.homeTeam?.name||f.homeTeam||f.home||"Home";
-   const away=f.awayTeam?.name||f.awayTeam||f.away||"Away";
+  const home=f.teams?.home?.name||"Home";
+  const away=f.teams?.away?.name||"Away";
    const name=home+" vs "+away;
    const card=document.createElement("div");
    card.className="tip";
