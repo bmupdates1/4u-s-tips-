@@ -83,8 +83,11 @@ async function request(path,options={}){
    ...(token?{"Authorization":"Bearer "+token}:{})
   }
  });
- const data=await response.json();
- if(!response.ok)throw new Error(data.error||"Request failed");
+ const text=await response.text();
+ let data={};
+ try{data=JSON.parse(text);}
+ catch{throw new Error("Server response: "+text.slice(0,200));}
+ if(!response.ok)throw new Error(data.error||"HTTP Error "+response.status);
  return data;
 }
 
@@ -115,22 +118,22 @@ async function login(){
   });
   token=result.token;
   sessionStorage.setItem("4u_customer_token",token);
-
   const me=await request("/api/auth/me");
-  if(me.user.role!=="CUSTOMER"){
-   throw new Error("Tumia akaunti ya Customer.");
-  }
-
-  document.getElementById("authSection").classList.add("hidden");
-  document.getElementById("customerSection").classList.remove("hidden");
-  document.getElementById("welcome").textContent="Welcome, "+me.user.username;
-  await loadTips();
-  await loadTipsters();
+  if(me.user.role!=="CUSTOMER")throw new Error("Tumia akaunti ya Customer.");
+  showCustomer(me.user.username);
  }catch(error){
   token="";
   sessionStorage.removeItem("4u_customer_token");
   message.textContent=error.message;
  }
+}
+
+function showCustomer(username){
+ document.getElementById("authSection").classList.add("hidden");
+ document.getElementById("customerSection").classList.remove("hidden");
+ document.getElementById("welcome").textContent="Welcome, "+username;
+ loadTips();
+ loadTipsters();
 }
 
 async function loadTips(){
@@ -147,7 +150,8 @@ async function loadTips(){
    const prediction=document.createElement("p");prediction.textContent="Prediction: "+tip.prediction;
    const odds=document.createElement("p");odds.textContent="Odds: "+(tip.odds??"Not set");
    const tipster=document.createElement("p");tipster.textContent="Tipster: "+(tip.tipster?.username||"Unknown");
-   card.append(match,prediction,odds,tipster);list.appendChild(card);
+   card.append(match,prediction,odds,tipster);
+   list.appendChild(card);
   });
  }catch(error){list.textContent=error.message;}
 }
@@ -170,9 +174,12 @@ async function loadTipsters(){
    img.onerror=()=>{img.onerror=null;img.src="https://placehold.co/100x100/063b2b/d4af37?text=4U";};
    const info=document.createElement("div");info.className="tipster-info";
    const name=document.createElement("h3");name.textContent=tipster.username;
-   const followers=document.createElement("p");followers.className="stats";followers.textContent="Followers: "+tipster.followers;
-   const accuracy=document.createElement("p");accuracy.textContent="Winning probability: "+tipster.accuracy+"%";
-   const wins=document.createElement("p");wins.textContent="Wins: "+tipster.wins+" | Losses: "+tipster.losses;
+   const followers=document.createElement("p");followers.className="stats";
+   followers.textContent="Followers: "+tipster.followers;
+   const accuracy=document.createElement("p");
+   accuracy.textContent="Winning probability: "+tipster.accuracy+"%";
+   const wins=document.createElement("p");
+   wins.textContent="Wins: "+tipster.wins+" | Losses: "+tipster.losses;
    info.append(name,followers,accuracy,wins);row.append(img,info);
    const button=document.createElement("button");
    button.textContent=tipster.isFollowing?"Unfollow":"Follow";
@@ -191,7 +198,9 @@ function openTipster(id){
 
 async function changeFollow(id,isFollowing){
  try{
-  await request("/api/follows/"+encodeURIComponent(id),{method:isFollowing?"DELETE":"POST"});
+  await request("/api/follows/"+encodeURIComponent(id),{
+   method:isFollowing?"DELETE":"POST"
+  });
   await loadTipsters();
  }catch(error){alert(error.message);}
 }
@@ -210,11 +219,7 @@ async function restoreSession(){
  try{
   const me=await request("/api/auth/me");
   if(me.user.role!=="CUSTOMER")throw new Error("Not a customer");
-  document.getElementById("authSection").classList.add("hidden");
-  document.getElementById("customerSection").classList.remove("hidden");
-  document.getElementById("welcome").textContent="Welcome, "+me.user.username;
-  await loadTips();
-  await loadTipsters();
+  showCustomer(me.user.username);
  }catch(error){
   token="";
   sessionStorage.removeItem("4u_customer_token");
