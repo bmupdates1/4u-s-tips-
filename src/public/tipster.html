@@ -25,14 +25,13 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 <h1>4U'S TIPS</h1>
 <p>TIPSTER DASHBOARD</p>
 </header>
-
 <main>
 <section id="loginSection">
 <div class="panel">
 <h2>Tipster Login</h2>
 <input id="username" placeholder="Username">
 <input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
+<button onclick="login()">LOGIN</button>
 <p id="loginMessage" class="message"></p>
 </div>
 </section>
@@ -40,33 +39,38 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 <section id="dashboard" class="hidden">
 <div class="panel">
 <h2 id="welcome">Welcome Tipster</h2>
-<button class="secondary" onclick="loadFixtures()">Refresh Fixtures</button>
-<button class="secondary" onclick="loadMyTips()">Refresh My Tips</button>
-<button onclick="logout()">Logout</button>
+<button class="secondary" onclick="loadMySlips()">REFRESH MY SLIPS</button>
+<button onclick="logout()">LOGOUT</button>
 <p id="dashboardMessage" class="message"></p>
 </div>
 
 <div class="panel">
-<h2>AVAILABLE FIXTURES</h2>
-<div id="fixturesList">Loading fixtures...</div>
-</div>
+<h2>PUBLISH NEW BOOKING SLIP</h2>
+<input id="title" placeholder="Slip title" maxlength="100">
+<input id="riskLabel" placeholder="Risk label (optional)" maxlength="50">
+<input id="totalOdds" type="number" step="0.01" min="0.01" placeholder="Total odds">
 
-<div class="panel">
-<h2>PUBLISH NEW TIP</h2>
-<input id="matchName" placeholder="Match name">
-<input id="prediction" placeholder="Prediction">
-<input id="odds" type="number" step="0.01" placeholder="Odds (optional)">
+<label>SportyBet Booking Code</label>
+<input id="sportyCode" placeholder="Enter SportyBet code">
+
+<label>BetPawa Booking Code</label>
+<input id="betpawaCode" placeholder="Enter BetPawa code">
+
 <select id="category">
-<option value="FREE">FREE TIP</option>
-<option value="PREMIUM">PREMIUM TIP</option>
+<option value="FREE">FREE</option>
+<option value="PREMIUM">PREMIUM</option>
 </select>
-<button onclick="publishTip()">PUBLISH TIP</button>
+
+<input id="price" type="number" min="0" step="0.01" placeholder="Price (0 for FREE)">
+<input id="validityUntil" type="datetime-local">
+
+<button onclick="publishSlip()">PUBLISH BOOKING SLIP</button>
 <p id="publishMessage" class="message"></p>
 </div>
 
 <div class="panel">
-<h2>MY PUBLISHED TIPS</h2>
-<div id="myTips">Loading...</div>
+<h2>MY PUBLISHED SLIPS</h2>
+<div id="mySlips">Loading...</div>
 </div>
 </section>
 </main>
@@ -98,115 +102,83 @@ async function login(){
     password:document.getElementById("password").value
    })
   });
-
   token=result.token;
   const me=await request("/api/auth/me");
-
   if(!["TIPSTER","SUPER_ADMIN"].includes(me.user.role)){
    token="";
    throw new Error("Akaunti hii si ya Tipster.");
   }
-
   document.getElementById("loginSection").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
   document.getElementById("welcome").textContent="Welcome, "+me.user.username;
-
-  await loadFixtures();
-  await loadMyTips();
-
+  await loadMySlips();
  }catch(error){
   token="";
   message.textContent=error.message;
  }
 }
 
-async function loadFixtures(){
- const list=document.getElementById("fixturesList");
- list.textContent="Loading fixtures...";
- try{
-  const result=await request("/api/football/next");
-  const fixtures=result.fixtures||result.matches||result||[];
-
-  if(!Array.isArray(fixtures)||!fixtures.length){
-   list.textContent="Hakuna fixtures zilizopatikana.";
-   return;
-  }
-
-  list.innerHTML="";
-  fixtures.forEach(f=>{
-  const home=f.teams?.home?.name||"Home";
-  const away=f.teams?.away?.name||"Away";
-   const name=home+" vs "+away;
-   const card=document.createElement("div");
-   card.className="tip";
-   const title=document.createElement("p");
-   title.textContent=name;
-   const button=document.createElement("button");
-   button.textContent="CHOOSE MATCH";
-   button.onclick=()=>{
-    document.getElementById("matchName").value=name;
-    document.getElementById("prediction").focus();
-   };
-   card.append(title,button);
-   list.appendChild(card);
-  });
- }catch(error){
-  list.textContent=error.message;
- }
-}
-
-async function publishTip(){
+async function publishSlip(){
  const message=document.getElementById("publishMessage");
  try{
-  const oddsValue=document.getElementById("odds").value;
-  await request("/api/tips",{
+  const category=document.getElementById("category").value;
+  const price=Number(document.getElementById("price").value||0);
+  const bookingCodes=[];
+
+  const sporty=document.getElementById("sportyCode").value.trim();
+  const betpawa=document.getElementById("betpawaCode").value.trim();
+
+  if(sporty)bookingCodes.push({bookmaker:"SportyBet",code:sporty});
+  if(betpawa)bookingCodes.push({bookmaker:"BetPawa",code:betpawa});
+  if(!bookingCodes.length)throw new Error("Weka angalau Booking Code moja.");
+  if(category==="FREE"&&price!==0)throw new Error("FREE slip lazima iwe na bei 0.");
+  if(category==="PREMIUM"&&price<=0)throw new Error("PREMIUM slip lazima iwe na bei zaidi ya 0.");
+
+  const validity=document.getElementById("validityUntil").value;
+  await request("/api/slips",{
    method:"POST",
    body:JSON.stringify({
-    matchName:document.getElementById("matchName").value.trim(),
-    prediction:document.getElementById("prediction").value.trim(),
-    odds:oddsValue?Number(oddsValue):undefined,
-    category:document.getElementById("category").value
+    title:document.getElementById("title").value.trim(),
+    riskLabel:document.getElementById("riskLabel").value.trim()||undefined,
+    totalOdds:Number(document.getElementById("totalOdds").value),
+    price,
+    category,
+    validityUntil:validity?new Date(validity).toISOString():undefined,
+    bookingCodes
    })
   });
 
-  message.textContent="Tip imechapishwa kikamilifu!";
-  document.getElementById("matchName").value="";
-  document.getElementById("prediction").value="";
-  document.getElementById("odds").value="";
-  await loadMyTips();
-
+  message.textContent="Booking Slip imechapishwa kikamilifu!";
+  ["title","riskLabel","totalOdds","sportyCode","betpawaCode","price","validityUntil"].forEach(id=>document.getElementById(id).value="");
+  await loadMySlips();
  }catch(error){
   message.textContent=error.message;
  }
 }
 
-async function loadMyTips(){
- const list=document.getElementById("myTips");
+async function loadMySlips(){
+ const list=document.getElementById("mySlips");
  list.textContent="Loading...";
  try{
-  const result=await request("/api/tips");
-  const tips=result.tips||[];
+  const result=await request("/api/slips/mine");
+  const slips=result.slips||[];
   list.innerHTML="";
-  const me=await request("/api/auth/me");
-  const mine=tips.filter(t=>t.tipsterId===me.user.id);
-
-  if(!mine.length){
-   list.textContent="Bado hujachapisha tip.";
+  if(!slips.length){
+   list.textContent="Bado hujachapisha Booking Slip.";
    return;
   }
-
-  mine.forEach(t=>{
+  slips.forEach(slip=>{
    const card=document.createElement("div");
    card.className="tip";
    const title=document.createElement("h3");
-   title.textContent=t.matchName;
-   const prediction=document.createElement("p");
-   prediction.textContent="Prediction: "+t.prediction;
-   const category=document.createElement("p");
-   category.textContent="Category: "+t.category;
+   title.textContent=slip.title;
    const odds=document.createElement("p");
-   odds.textContent="Odds: "+(t.odds??"Not set");
-   card.append(title,prediction,category,odds);
+   odds.textContent="Total Odds: "+slip.totalOdds;
+   const category=document.createElement("p");
+   category.textContent="Category: "+slip.category;
+   const codes=document.createElement("p");
+   codes.textContent=(slip.bookingCodes||[]).map(x=>x.bookmaker+": "+x.code).join(" | ");
+   card.append(title,odds,category,codes);
    list.appendChild(card);
   });
  }catch(error){
@@ -219,6 +191,7 @@ function logout(){
  document.getElementById("dashboard").classList.add("hidden");
  document.getElementById("loginSection").classList.remove("hidden");
  document.getElementById("password").value="";
+ document.getElementById("loginMessage").textContent="";
 }
 </script>
 </body>
