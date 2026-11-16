@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4U'S TIPS - Tipster Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#071b15;color:white}
+header{background:#063b2b;border-bottom:2px solid #d4af37;padding:20px;text-align:center}
+h1,h2{color:#d4af37}
+main{max-width:700px;margin:auto;padding:18px}
+.panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
+input,select,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
+button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
+.secondary{background:#063b2b;color:white;border:1px solid #d4af37}
+.message{color:#d4af37}
+.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+<h1>4U'S TIPS</h1>
+<p>TIPSTER DASHBOARD</p>
+</header>
+
+<main>
+<section id="loginSection">
+<div class="panel">
+<h2>Tipster Login</h2>
+<input id="username" placeholder="Username">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="loginMessage" class="message"></p>
+</div>
+</section>
+
+<section id="dashboard" class="hidden">
+<div class="panel">
+<h2 id="welcome">Welcome Tipster</h2>
+<button class="secondary" onclick="loadFixtures()">Refresh Fixtures</button>
+<button class="secondary" onclick="loadMyTips()">Refresh My Tips</button>
+<button onclick="logout()">Logout</button>
+<p id="dashboardMessage" class="message"></p>
+</div>
+
+<div class="panel">
+<h2>AVAILABLE FIXTURES</h2>
+<div id="fixturesList">Loading fixtures...</div>
+</div>
+
+<div class="panel">
+<h2>PUBLISH NEW TIP</h2>
+<input id="matchName" placeholder="Match name">
+<input id="prediction" placeholder="Prediction">
+<input id="odds" type="number" step="0.01" placeholder="Odds (optional)">
+<select id="category">
+<option value="FREE">FREE TIP</option>
+<option value="PREMIUM">PREMIUM TIP</option>
+</select>
+<button onclick="publishTip()">PUBLISH TIP</button>
+<p id="publishMessage" class="message"></p>
+</div>
+
+<div class="panel">
+<h2>MY PUBLISHED TIPS</h2>
+<div id="myTips">Loading...</div>
+</div>
+</section>
+</main>
+
+<script>
+const API=window.location.origin;
+let token="";
+
+async function request(path,options={}){
+ const response=await fetch(API+path,{
+  ...options,
+  headers:{
+   "Content-Type":"application/json",
+   ...(token?{"Authorization":"Bearer "+token}:{})
+  }
+ });
+ const data=await response.json();
+ if(!response.ok)throw new Error(data.error||"Request failed");
+ return data;
+}
+
+async function login(){
+ const message=document.getElementById("loginMessage");
+ try{
+  const result=await request("/api/auth/login",{
+   method:"POST",
+   body:JSON.stringify({
+    username:document.getElementById("username").value.trim(),
+    password:document.getElementById("password").value
+   })
+  });
+
+  token=result.token;
+  const me=await request("/api/auth/me");
+
+  if(!["TIPSTER","SUPER_ADMIN"].includes(me.user.role)){
+   token="";
+   throw new Error("Akaunti hii si ya Tipster.");
+  }
+
+  document.getElementById("loginSection").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+  document.getElementById("welcome").textContent="Welcome, "+me.user.username;
+
+  await loadFixtures();
+  await loadMyTips();
+
+ }catch(error){
+  token="";
+  message.textContent=error.message;
+ }
+}
+
+async function loadFixtures(){
+ const list=document.getElementById("fixturesList");
+ list.textContent="Loading fixtures...";
+ try{
+  const result=await request("/api/football/next");
+  const fixtures=result.fixtures||result.matches||result||[];
+
+  if(!Array.isArray(fixtures)||!fixtures.length){
+   list.textContent="Hakuna fixtures zilizopatikana.";
+   return;
+  }
+
+  list.innerHTML="";
+  fixtures.forEach(f=>{
+   const home=f.homeTeam?.name||f.homeTeam||f.home||"Home";
+   const away=f.awayTeam?.name||f.awayTeam||f.away||"Away";
+   const name=home+" vs "+away;
+   const card=document.createElement("div");
+   card.className="tip";
+   const title=document.createElement("p");
+   title.textContent=name;
+   const button=document.createElement("button");
+   button.textContent="CHOOSE MATCH";
+   button.onclick=()=>{
+    document.getElementById("matchName").value=name;
+    document.getElementById("prediction").focus();
+   };
+   card.append(title,button);
+   list.appendChild(card);
+  });
+ }catch(error){
+  list.textContent=error.message;
+ }
+}
+
+async function publishTip(){
+ const message=document.getElementById("publishMessage");
+ try{
+  const oddsValue=document.getElementById("odds").value;
+  await request("/api/tips",{
+   method:"POST",
+   body:JSON.stringify({
+    matchName:document.getElementById("matchName").value.trim(),
+    prediction:document.getElementById("prediction").value.trim(),
+    odds:oddsValue?Number(oddsValue):undefined,
+    category:document.getElementById("category").value
+   })
+  });
+
+  message.textContent="Tip imechapishwa kikamilifu!";
+  document.getElementById("matchName").value="";
+  document.getElementById("prediction").value="";
+  document.getElementById("odds").value="";
+  await loadMyTips();
+
+ }catch(error){
+  message.textContent=error.message;
+ }
+}
+
+async function loadMyTips(){
+ const list=document.getElementById("myTips");
+ list.textContent="Loading...";
+ try{
+  const result=await request("/api/tips");
+  const tips=result.tips||[];
+  list.innerHTML="";
+  const me=await request("/api/auth/me");
+  const mine=tips.filter(t=>t.tipsterId===me.user.id);
+
+  if(!mine.length){
+   list.textContent="Bado hujachapisha tip.";
+   return;
+  }
+
+  mine.forEach(t=>{
+   const card=document.createElement("div");
+   card.className="tip";
+   const title=document.createElement("h3");
+   title.textContent=t.matchName;
+   const prediction=document.createElement("p");
+   prediction.textContent="Prediction: "+t.prediction;
+   const category=document.createElement("p");
+   category.textContent="Category: "+t.category;
+   const odds=document.createElement("p");
+   odds.textContent="Odds: "+(t.odds??"Not set");
+   card.append(title,prediction,category,odds);
+   list.appendChild(card);
+  });
+ }catch(error){
+  list.textContent=error.message;
+ }
+}
+
+function logout(){
+ token="";
+ document.getElementById("dashboard").classList.add("hidden");
+ document.getElementById("loginSection").classList.remove("hidden");
+ document.getElementById("password").value="";
+}
+</script>
+</body>
+</html>
