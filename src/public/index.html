@@ -1,377 +1,151 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4U'S TIPS | Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4U'S TIPS</title>
 <style>
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #071b13;
-  color: white;
-}
-
-header {
-  background: #103d2b;
-  padding: 20px;
-  border-bottom: 2px solid #d4af37;
-}
-
-header h1 { margin: 0; color: #d4af37; }
-header p { margin-bottom: 0; }
-
-main {
-  padding: 20px;
-  max-width: 1000px;
-  margin: auto;
-}
-
-.card {
-  background: #123b2b;
-  padding: 20px;
-  margin-bottom: 18px;
-  border-radius: 12px;
-  border: 1px solid #315b45;
-}
-
-h2 { color: #e5c45b; }
-
-input, select, button {
-  width: 100%;
-  padding: 13px;
-  margin: 7px 0;
-  border-radius: 7px;
-  border: 0;
-  font-size: 16px;
-}
-
-button {
-  background: #d4af37;
-  color: #071b13;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.stat {
-  background: #09291d;
-  border: 1px solid #315b45;
-  border-radius: 10px;
-  padding: 16px;
-  text-align: center;
-}
-
-.stat h3 {
-  color: #e5c45b;
-  font-size: 14px;
-  margin: 0 0 10px;
-}
-
-.stat strong {
-  font-size: 28px;
-}
-
-.tip {
-  background: #09291d;
-  padding: 13px;
-  border-radius: 8px;
-  margin: 12px 0;
-  border: 1px solid #315b45;
-}
-
-.tip p { line-height: 1.6; }
-
-#message, #tipMessage { color: #e5c45b; }
-.small { color: #c9d7ce; font-size: 13px; }
-
-@media (min-width: 600px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#071b15;color:white}
+header{background:#063b2b;border-bottom:2px solid #d4af37;padding:20px;text-align:center}
+h1,h2{color:#d4af37}
+main{max-width:650px;margin:auto;padding:18px}
+.panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
+input,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
+button{border:0;background:#d4af37;color:#102a21;font-weight:bold}
+.secondary{background:#063b2b;color:white;border:1px solid #d4af37}
+.hidden{display:none}
+.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
+.message{color:#d4af37}
 </style>
 </head>
-
 <body>
 <header>
-  <h1>4U'S TIPS</h1>
-  <p>PREDICT SMARTER | ADMIN DASHBOARD</p>
+<h1>4U'S TIPS</h1>
+<p>PREDICT SMARTER</p>
 </header>
-
 <main>
-  <section class="card" id="login">
-    <h2>Admin Login</h2>
-    <input id="username" placeholder="Username" value="bm_updates">
-    <input id="password" type="password" placeholder="Password">
-    <button onclick="login()">LOGIN</button>
-    <p id="message"></p>
-  </section>
+<section id="authSection">
+<div class="panel">
+<h2>Customer Login</h2>
+<input id="loginUsername" placeholder="Username">
+<input id="loginPassword" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="loginMessage" class="message"></p>
+</div>
+<div class="panel">
+<h2>Create Customer Account</h2>
+<input id="registerUsername" placeholder="Choose username">
+<input id="registerEmail" type="email" placeholder="Email (optional)">
+<input id="registerPassword" type="password" placeholder="Create password">
+<button onclick="register()">Register</button>
+<p id="registerMessage" class="message"></p>
+</div>
+</section>
 
-  <section class="card" id="dashboard" hidden>
-    <h2>Welcome, Super Admin</h2>
-    <button onclick="logout()">LOGOUT</button>
-
-    <h2>Statistics</h2>
-    <div class="stats-grid">
-      <div class="stat">
-        <h3>TOTAL TIPS</h3>
-        <strong id="totalTips">0</strong>
-      </div>
-      <div class="stat">
-        <h3>WON</h3>
-        <strong id="wonTips">0</strong>
-      </div>
-      <div class="stat">
-        <h3>LOST</h3>
-        <strong id="lostTips">0</strong>
-      </div>
-      <div class="stat">
-        <h3>VOID</h3>
-        <strong id="voidTips">0</strong>
-      </div>
-      <div class="stat">
-        <h3>PENDING</h3>
-        <strong id="pendingTips">0</strong>
-      </div>
-      <div class="stat">
-        <h3>WINNING ACCURACY</h3>
-        <strong id="accuracy">0%</strong>
-      </div>
-    </div>
-
-    <p class="small">
-      Accuracy = WON ÷ (WON + LOST) × 100.
-      VOID and PENDING are excluded.
-    </p>
-
-    <h2>Add New Tip</h2>
-
-    <input id="match" placeholder="Match name">
-    <input id="prediction" placeholder="Prediction">
-    <input id="odds" type="number" step="any" placeholder="Odds (optional)">
-
-    <select id="category">
-      <option value="FREE">FREE</option>
-      <option value="PREMIUM">PREMIUM</option>
-    </select>
-
-    <button onclick="addTip()">PUBLISH TIP</button>
-    <p id="tipMessage"></p>
-
-    <h2>Published Tips</h2>
-    <div id="tips">Loading...</div>
-  </section>
+<section id="customerSection" class="hidden">
+<div class="panel">
+<h2 id="welcome">Welcome</h2>
+<button class="secondary" onclick="loadTips()">Refresh Tips</button>
+<button onclick="logout()">Logout</button>
+</div>
+<div class="panel">
+<h2>FREE TIPS</h2>
+<div id="tipsList">Loading tips...</div>
+</div>
+<div class="panel">
+<h2>PREMIUM TIPS</h2>
+<p>Premium tips zinahitaji malipo na usajili. Mfumo wa malipo utaunganishwa baadaye.</p>
+</div>
+</section>
 </main>
 
 <script>
-const API = "https://fouru-s-tips.onrender.com";
-let token = "";
+const API=window.location.origin;
+let token="";
 
-async function login() {
-  const message = document.getElementById("message");
-  message.textContent = "Logging in...";
-
-  try {
-    const response = await fetch(API + "/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: document.getElementById("username").value.trim(),
-        password: document.getElementById("password").value
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) throw new Error(data.error || "Login failed");
-    if (data.user.role !== "SUPER_ADMIN") {
-      throw new Error("Super Admin access only");
-    }
-
-    token = data.token;
-    document.getElementById("login").hidden = true;
-    document.getElementById("dashboard").hidden = false;
-
-    await loadTips();
-
-  } catch (error) {
-    message.textContent = error.message;
+async function request(path,options={}){
+ const response=await fetch(API+path,{
+  ...options,
+  headers:{
+   "Content-Type":"application/json",
+   ...(token?{"Authorization":"Bearer "+token}:{})
   }
+ });
+ const data=await response.json();
+ if(!response.ok)throw new Error(data.error||"Request failed");
+ return data;
 }
 
-function updateStatistics(tips) {
-  const total = tips.length;
-  const won = tips.filter(t => t.result === "WON").length;
-  const lost = tips.filter(t => t.result === "LOST").length;
-  const voidCount = tips.filter(t => t.result === "VOID").length;
-  const pending = tips.filter(t => t.result === "PENDING").length;
-
-  const decided = won + lost;
-  const accuracy = decided === 0
-    ? 0
-    : (won / decided) * 100;
-
-  document.getElementById("totalTips").textContent = total;
-  document.getElementById("wonTips").textContent = won;
-  document.getElementById("lostTips").textContent = lost;
-  document.getElementById("voidTips").textContent = voidCount;
-  document.getElementById("pendingTips").textContent = pending;
-  document.getElementById("accuracy").textContent =
-    accuracy.toFixed(1) + "%";
+async function register(){
+ const message=document.getElementById("registerMessage");
+ try{
+  await request("/api/auth/register",{
+   method:"POST",
+   body:JSON.stringify({
+    username:document.getElementById("registerUsername").value.trim(),
+    email:document.getElementById("registerEmail").value.trim()||undefined,
+    password:document.getElementById("registerPassword").value
+   })
+  });
+  message.textContent="Account imetengenezwa! Sasa unaweza Login.";
+ }catch(error){message.textContent=error.message;}
 }
 
-async function loadTips() {
-  const area = document.getElementById("tips");
-  area.textContent = "Loading tips...";
-
-  try {
-    const response = await fetch(API + "/api/tips", {
-      headers: { Authorization: "Bearer " + token }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Could not load tips");
-    }
-
-    updateStatistics(data.tips);
-    area.innerHTML = "";
-
-    if (!data.tips.length) {
-      area.textContent = "No tips published yet.";
-      return;
-    }
-
-    data.tips.forEach(tip => {
-      const item = document.createElement("div");
-      item.className = "tip";
-
-      const details = document.createElement("p");
-      details.textContent =
-        tip.matchName + " | " +
-        tip.prediction + " | " +
-        tip.category + " | Result: " + tip.result;
-
-      const resultSelect = document.createElement("select");
-
-      ["PENDING", "WON", "LOST", "VOID"].forEach(result => {
-        const option = document.createElement("option");
-        option.value = result;
-        option.textContent = result;
-        if (tip.result === result) option.selected = true;
-        resultSelect.appendChild(option);
-      });
-
-      const updateButton = document.createElement("button");
-      updateButton.textContent = "UPDATE RESULT";
-
-      updateButton.onclick = async () => {
-        updateButton.disabled = true;
-
-        try {
-          const updateResponse = await fetch(
-            API + "/api/tips/" + encodeURIComponent(tip.id) + "/result",
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + token
-              },
-              body: JSON.stringify({
-                result: resultSelect.value
-              })
-            }
-          );
-
-          const updateData = await updateResponse.json();
-
-          if (!updateResponse.ok) {
-            throw new Error(updateData.error || "Update failed");
-          }
-
-          alert("Result updated successfully!");
-          await loadTips();
-
-        } catch (error) {
-          alert(error.message);
-          updateButton.disabled = false;
-        }
-      };
-
-      item.appendChild(details);
-      item.appendChild(resultSelect);
-      item.appendChild(updateButton);
-      area.appendChild(item);
-    });
-
-  } catch (error) {
-    area.textContent = error.message;
+async function login(){
+ const message=document.getElementById("loginMessage");
+ try{
+  const result=await request("/api/auth/login",{
+   method:"POST",
+   body:JSON.stringify({
+    username:document.getElementById("loginUsername").value.trim(),
+    password:document.getElementById("loginPassword").value
+   })
+  });
+  token=result.token;
+  const me=await request("/api/auth/me");
+  if(me.user.role!=="CUSTOMER"){
+   token="";
+   throw new Error("Tumia akaunti ya Customer.");
   }
+  document.getElementById("authSection").classList.add("hidden");
+  document.getElementById("customerSection").classList.remove("hidden");
+  document.getElementById("welcome").textContent="Welcome, "+me.user.username;
+  await loadTips();
+ }catch(error){message.textContent=error.message;}
 }
 
-async function addTip() {
-  const message = document.getElementById("tipMessage");
-  message.textContent = "Publishing...";
-
-  try {
-    const body = {
-      matchName: document.getElementById("match").value.trim(),
-      prediction: document.getElementById("prediction").value.trim(),
-      category: document.getElementById("category").value
-    };
-
-    const odds = document.getElementById("odds").value;
-    if (odds !== "") body.odds = Number(odds);
-
-    const response = await fetch(API + "/api/tips", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token
-      },
-      body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Could not publish tip");
-    }
-
-    message.textContent = "Tip published successfully!";
-
-    document.getElementById("match").value = "";
-    document.getElementById("prediction").value = "";
-    document.getElementById("odds").value = "";
-
-    await loadTips();
-
-  } catch (error) {
-    message.textContent = error.message;
-  }
+async function loadTips(){
+ const list=document.getElementById("tipsList");
+ list.textContent="Loading...";
+ try{
+  const result=await request("/api/tips");
+  const tips=result.tips||[];
+  list.innerHTML="";
+  if(!tips.length){list.textContent="Hakuna FREE tips kwa sasa.";return;}
+  tips.forEach(tip=>{
+   const card=document.createElement("div");
+   card.className="tip";
+   const match=document.createElement("h3");
+   match.textContent=tip.matchName;
+   const prediction=document.createElement("p");
+   prediction.textContent="Prediction: "+tip.prediction;
+   const odds=document.createElement("p");
+   odds.textContent="Odds: "+(tip.odds??"Not set");
+   const tipster=document.createElement("p");
+   tipster.textContent="Tipster: "+(tip.tipster?.username||"Unknown");
+   card.append(match,prediction,odds,tipster);
+   list.appendChild(card);
+  });
+ }catch(error){list.textContent=error.message;}
 }
 
-function logout() {
-  token = "";
-  document.getElementById("dashboard").hidden = true;
-  document.getElementById("login").hidden = false;
-  document.getElementById("password").value = "";
-  document.getElementById("message").textContent = "";
+function logout(){
+ token="";
+ document.getElementById("customerSection").classList.add("hidden");
+ document.getElementById("authSection").classList.remove("hidden");
+ document.getElementById("loginPassword").value="";
+ document.getElementById("loginMessage").textContent="Umetoka kwenye akaunti.";
 }
 </script>
 </body>
