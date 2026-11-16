@@ -1,19 +1,25 @@
+
 import { Router } from "express";
 import { z } from "zod";
 import {
   getFixtureById,
   getNextFixtures
 } from "../services/footballApi.js";
-
-import {
-  requireAuth,
-  requireSuperAdmin
-} from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireSuperAdmin);
+
+router.use((req, res, next) => {
+  if (!["SUPER_ADMIN", "TIPSTER"].includes(req.user?.role)) {
+    return res.status(403).json({
+      error: "Only Super Admin and Tipsters can view fixtures"
+    });
+  }
+
+  next();
+});
 
 router.get("/fixture", async (req, res) => {
   const parsed = z.object({
@@ -45,7 +51,7 @@ router.get("/fixture", async (req, res) => {
   }
 });
 
-router.get("/next", async (_req, res) => {
+router.get("/next", async (req, res) => {
   try {
     const fixtures = await getNextFixtures();
 
