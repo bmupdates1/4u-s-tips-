@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -10,6 +9,7 @@ import tipsRoutes from "./routes/tips.js";
 import followsRoutes from "./routes/follows.js";
 import tipstersRoutes from "./routes/tipsters.js";
 import usersRoutes from "./routes/users.js";
+import footballRoutes from "./routes/football.js";
 
 if (
   !process.env.DATABASE_URL ||
@@ -23,7 +23,6 @@ if (
 
 const app = express();
 
-// Render proxy configuration
 app.set("trust proxy", 1);
 
 app.use(helmet({
@@ -54,6 +53,7 @@ app.use("/api/tips", tipsRoutes);
 app.use("/api/follows", followsRoutes);
 app.use("/api/tipsters", tipstersRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/football", footballRoutes);
 
 const port = Number(process.env.PORT || 4000);
 
