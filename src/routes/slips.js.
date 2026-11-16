@@ -60,9 +60,13 @@ router.post("/", async (req, res) => {
         validityUntil: data.validityUntil,
         category: data.category,
         isPublished: true,
-        bookingCodes: {
-          create: data.bookingCodes
-        }
+      bookingCodes: {
+  create: data.bookingCodes.map(item => ({
+    bookmaker:
+      item.bookmaker === "SportyBet" ? "SPORTYBET" : "BETPAWA",
+    code: item.code
+  }))
+}
       },
       include: {
         bookingCodes: true
