@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tipster Profile | 4U'S TIPS</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#071b15;color:white}
+header{background:#063b2b;border-bottom:2px solid #d4af37;padding:18px;text-align:center}
+h1,h2,h3{color:#d4af37}
+main{max-width:650px;margin:auto;padding:18px}
+.panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
+button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px;border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
+.secondary{background:#063b2b;color:white;border:1px solid #d4af37}
+.avatar{width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #d4af37}
+.profile{text-align:center}
+.stats{color:#d4af37}
+.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
+.message{color:#d4af37}
+</style>
+</head>
+<body>
+<header>
+<h1>4U'S TIPS</h1>
+<p>PREDICT SMARTER</p>
+</header>
+
+<main>
+<div class="panel">
+<button class="secondary" onclick="goBack()">← Back to Tipsters</button>
+</div>
+
+<div class="panel profile" id="profile">
+<p class="message">Loading Tipster profile...</p>
+</div>
+
+<div class="panel">
+<h2>BETTING TIPS</h2>
+<div id="tipsList">Loading betting tips...</div>
+</div>
+</main>
+
+<script>
+const API=window.location.origin;
+const params=new URLSearchParams(window.location.search);
+const tipsterId=params.get("id");
+let token="";
+
+async function request(path){
+ const response=await fetch(API+path,{
+  headers:{"Authorization":"Bearer "+token}
+ });
+ const data=await response.json();
+ if(!response.ok)throw new Error(data.error||"Request failed");
+ return data;
+}
+
+function goBack(){
+ window.location.href="index.html";
+}
+
+function showError(message){
+ document.getElementById("profile").innerHTML="";
+ const p=document.createElement("p");
+ p.className="message";
+ p.textContent=message;
+ document.getElementById("profile").appendChild(p);
+ document.getElementById("tipsList").textContent=message;
+}
+
+async function loadProfile(){
+ try{
+  if(!tipsterId)throw new Error("Tipster ID haipo kwenye link.");
+
+  const savedToken=sessionStorage.getItem("4u_customer_token");
+  if(!savedToken)throw new Error("Tafadhali login kwanza kupitia Customer Website.");
+
+  token=savedToken;
+
+  const me=await request("/api/auth/me");
+  if(me.user.role!=="CUSTOMER")throw new Error("Tumia akaunti ya Customer.");
+
+  const result=await request("/api/tipsters/"+encodeURIComponent(tipsterId));
+  const t=result.tipster;
+
+  const profile=document.getElementById("profile");
+  profile.innerHTML="";
+
+  const img=document.createElement("img");
+  img.className="avatar";
+  img.src=t.profileImage||"https://placehold.co/120x120/063b2b/d4af37?text=4U";
+  img.onerror=()=>{img.src="https://placehold.co/120x120/063b2b/d4af37?text=4U";};
+
+  const name=document.createElement("h2");
+  name.textContent=t.username;
+
+  const followers=document.createElement("p");
+  followers.className="stats";
+  followers.textContent="Followers: "+t.followers;
+
+  const accuracy=document.createElement("h3");
+  accuracy.textContent="Winning Probability: "+t.accuracy+"%";
+
+  const record=document.createElement("p");
+  record.textContent="Wins: "+t.wins+" | Losses: "+t.losses;
+
+  const follow=document.createElement("button");
+  follow.textContent=t.isFollowing?"Unfollow":"Follow";
+  follow.onclick=()=>changeFollow(t.isFollowing);
+
+  profile.append(img,name,followers,accuracy,record,follow);
+
+  const list=document.getElementById("tipsList");
+  list.innerHTML="";
+  const tips=t.tips||[];
+
+  if(!tips.length){
+   list.textContent="Tipster huyu hana FREE betting tips kwa sasa.";
+   return;
+  }
+
+  tips.forEach(tip=>{
+   const card=document.createElement("div");
+   card.className="tip";
+
+   const match=document.createElement("h3");
+   match.textContent=tip.matchName;
+
+   const prediction=document.createElement("p");
+   prediction.textContent="Prediction: "+tip.prediction;
+
+   const odds=document.createElement("p");
+   odds.textContent="Odds: "+(tip.odds??"Not set");
+
+   const result=document.createElement("p");
+   result.textContent="Result: "+tip.result;
+
+   card.append(match,prediction,odds,result);
+   list.appendChild(card);
+  });
+
+ }catch(error){
+  showError(error.message);
+ }
+}
+
+async function changeFollow(isFollowing){
+ try{
+  await fetch(API+"/api/follows/"+encodeURIComponent(tipsterId),{
+   method:isFollowing?"DELETE":"POST",
+   headers:{"Authorization":"Bearer "+token}
+  });
+  await loadProfile();
+ }catch(error){alert(error.message);}
+}
+
+loadProfile();
+</script>
+</body>
+</html>
