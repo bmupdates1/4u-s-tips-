@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,11 +13,12 @@ h1,h2{color:#d4af37}
 main{max-width:650px;margin:auto;padding:18px}
 .panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
 input,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
-button{border:0;background:#d4af37;color:#102a21;font-weight:bold}
+button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
 .secondary{background:#063b2b;color:white;border:1px solid #d4af37}
 .hidden{display:none}
 .tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
 .message{color:#d4af37}
+.stats{color:#d4af37;font-size:14px}
 </style>
 </head>
 <body>
@@ -24,6 +26,7 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold}
 <h1>4U'S TIPS</h1>
 <p>PREDICT SMARTER</p>
 </header>
+
 <main>
 <section id="authSection">
 <div class="panel">
@@ -33,11 +36,12 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold}
 <button onclick="login()">Login</button>
 <p id="loginMessage" class="message"></p>
 </div>
+
 <div class="panel">
 <h2>Create Customer Account</h2>
 <input id="registerUsername" placeholder="Choose username">
-<input id="registerEmail" type="email" placeholder="Email (optional)">
-<input id="registerPassword" type="password" placeholder="Create password">
+<input id="registerEmail" type="email" placeholder="Email address">
+<input id="registerPassword" type="password" placeholder="Create password (12 characters minimum)">
 <button onclick="register()">Register</button>
 <p id="registerMessage" class="message"></p>
 </div>
@@ -47,12 +51,21 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold}
 <div class="panel">
 <h2 id="welcome">Welcome</h2>
 <button class="secondary" onclick="loadTips()">Refresh Tips</button>
+<button class="secondary" onclick="loadTipsters()">Refresh Tipsters</button>
 <button onclick="logout()">Logout</button>
 </div>
+
 <div class="panel">
 <h2>FREE TIPS</h2>
 <div id="tipsList">Loading tips...</div>
 </div>
+
+<div class="panel">
+<h2>TOP TIPSTERS</h2>
+<p>Fuata Tipsters unaowapenda.</p>
+<div id="tipstersList">Loading tipsters...</div>
+</div>
+
 <div class="panel">
 <h2>PREMIUM TIPS</h2>
 <p>Premium tips zinahitaji malipo na usajili. Mfumo wa malipo utaunganishwa baadaye.</p>
@@ -84,12 +97,14 @@ async function register(){
    method:"POST",
    body:JSON.stringify({
     username:document.getElementById("registerUsername").value.trim(),
-    email:document.getElementById("registerEmail").value.trim()||undefined,
+    email:document.getElementById("registerEmail").value.trim(),
     password:document.getElementById("registerPassword").value
    })
   });
   message.textContent="Account imetengenezwa! Sasa unaweza Login.";
- }catch(error){message.textContent=error.message;}
+ }catch(error){
+  message.textContent=error.message;
+ }
 }
 
 async function login(){
@@ -102,42 +117,132 @@ async function login(){
     password:document.getElementById("loginPassword").value
    })
   });
+
   token=result.token;
   const me=await request("/api/auth/me");
+
   if(me.user.role!=="CUSTOMER"){
    token="";
    throw new Error("Tumia akaunti ya Customer.");
   }
+
   document.getElementById("authSection").classList.add("hidden");
   document.getElementById("customerSection").classList.remove("hidden");
   document.getElementById("welcome").textContent="Welcome, "+me.user.username;
+
   await loadTips();
- }catch(error){message.textContent=error.message;}
+  await loadTipsters();
+
+ }catch(error){
+  token="";
+  message.textContent=error.message;
+ }
 }
 
 async function loadTips(){
  const list=document.getElementById("tipsList");
  list.textContent="Loading...";
+
  try{
   const result=await request("/api/tips");
   const tips=result.tips||[];
   list.innerHTML="";
-  if(!tips.length){list.textContent="Hakuna FREE tips kwa sasa.";return;}
+
+  if(!tips.length){
+   list.textContent="Hakuna FREE tips kwa sasa.";
+   return;
+  }
+
   tips.forEach(tip=>{
    const card=document.createElement("div");
    card.className="tip";
+
    const match=document.createElement("h3");
    match.textContent=tip.matchName;
+
    const prediction=document.createElement("p");
    prediction.textContent="Prediction: "+tip.prediction;
+
    const odds=document.createElement("p");
    odds.textContent="Odds: "+(tip.odds??"Not set");
+
    const tipster=document.createElement("p");
    tipster.textContent="Tipster: "+(tip.tipster?.username||"Unknown");
+
    card.append(match,prediction,odds,tipster);
    list.appendChild(card);
   });
- }catch(error){list.textContent=error.message;}
+
+ }catch(error){
+  list.textContent=error.message;
+ }
+}
+
+async function loadTipsters(){
+ const list=document.getElementById("tipstersList");
+ list.textContent="Loading tipsters...";
+
+ try{
+  const result=await request("/api/tipsters");
+  const tipsters=result.tipsters||[];
+  list.innerHTML="";
+
+  if(!tipsters.length){
+   list.textContent="Hakuna Tipsters waliopatikana kwa sasa.";
+   return;
+  }
+
+  tipsters.forEach(tipster=>{
+   const card=document.createElement("div");
+   card.className="tip";
+
+   const name=document.createElement("h3");
+   name.textContent=tipster.username;
+
+   const followers=document.createElement("p");
+   followers.className="stats";
+   followers.textContent="Followers: "+tipster.followers;
+
+   const wins=document.createElement("p");
+   wins.textContent="Wins: "+tipster.wins+" | Losses: "+tipster.losses;
+
+   const accuracy=document.createElement("p");
+   accuracy.textContent="Accuracy: "+tipster.accuracy+"%";
+
+   const button=document.createElement("button");
+   button.textContent=tipster.isFollowing?"Unfollow":"Follow";
+
+   button.onclick=()=>changeFollow(
+    tipster.id,
+    tipster.isFollowing
+   );
+
+   card.append(name,followers,wins,accuracy,button);
+   list.appendChild(card);
+  });
+
+ }catch(error){
+  list.textContent=error.message;
+ }
+}
+
+async function changeFollow(tipsterId,isFollowing){
+ try{
+  if(isFollowing){
+   await request("/api/follows/"+encodeURIComponent(tipsterId),{
+    method:"DELETE"
+   });
+  }else{
+   await request("/api/follows/"+encodeURIComponent(tipsterId),{
+    method:"POST"
+   });
+  }
+
+  await loadTipsters();
+
+ }catch(error){
+  alert(error.message);
+ }
 }
 
 function logout(){
