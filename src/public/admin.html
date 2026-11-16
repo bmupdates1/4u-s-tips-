@@ -2,687 +2,335 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#071b14">
-  <title>4U'S TIPS - Admin Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#071b14">
+<title>4U'S TIPS - Admin Dashboard</title>
 
-  <style>
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 16px;
-      background: #071b14;
-      color: #fff;
-      font-family: Arial, sans-serif;
-    }
-
-    header {
-      text-align: center;
-      padding: 22px 10px;
-      border-bottom: 2px solid #d4af37;
-      margin-bottom: 22px;
-    }
-
-    header h1 {
-      color: #d4af37;
-      margin: 0;
-      font-size: 29px;
-    }
-
-    header p {
-      letter-spacing: 3px;
-      font-size: 12px;
-    }
-
-    .panel {
-      background: #102b20;
-      border: 1px solid #315b43;
-      border-radius: 12px;
-      padding: 17px;
-      margin-bottom: 18px;
-    }
-
-    h2 {
-      color: #d4af37;
-      font-size: 20px;
-    }
-
-    input {
-      display: block;
-      width: 100%;
-      padding: 13px;
-      margin: 12px 0;
-      border-radius: 7px;
-      border: 1px solid #d4af37;
-      background: #071b14;
-      color: white;
-      font-size: 16px;
-    }
-
-    button {
-      background: #d4af37;
-      color: #071b14;
-      border: none;
-      padding: 12px 16px;
-      border-radius: 7px;
-      font-weight: bold;
-      cursor: pointer;
-      margin: 5px 3px 5px 0;
-    }
-
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
-
-    button.secondary {
-      background: #315b43;
-      color: white;
-    }
-
-    button.danger {
-      background: #a83232;
-      color: white;
-    }
-
-    #dashboard { display: none; }
-
-    #message,
-    #dashboardMessage,
-    #usersMessage,
-    #fixturesMessage {
-      color: #ffd76a;
-      overflow-wrap: anywhere;
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-
-    .stat {
-      background: #102b20;
-      border: 1px solid #d4af37;
-      border-radius: 10px;
-      padding: 15px 8px;
-      text-align: center;
-    }
-
-    .stat h3 {
-      color: #d4af37;
-      font-size: 25px;
-      margin: 5px;
-    }
-
-    .stat p {
-      font-size: 13px;
-      margin: 5px;
-    }
-
-    .user {
-      background: #071b14;
-      border: 1px solid #315b43;
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 10px;
-      overflow-wrap: anywhere;
-    }
-
-    .role {
-      color: #ffd76a;
-      font-weight: bold;
-    }
-
-    .fixture {
-      background: #071b14;
-      border: 1px solid #315b43;
-      border-radius: 10px;
-      padding: 13px;
-      margin-top: 12px;
-    }
-
-    .teams {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      text-align: center;
-    }
-
-    .team {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .team img {
-      width: 52px;
-      height: 52px;
-      object-fit: contain;
-      display: block;
-      margin: 0 auto 7px;
-    }
-
-    .team-name {
-      font-size: 13px;
-      font-weight: bold;
-      overflow-wrap: anywhere;
-    }
-
-    .versus {
-      color: #d4af37;
-      font-weight: bold;
-    }
-
-    .fixture-info {
-      border-top: 1px solid #315b43;
-      margin-top: 12px;
-      padding-top: 8px;
-      font-size: 13px;
-      color: #ddd;
-    }
-
-    .empty {
-      color: #bbb;
-      text-align: center;
-      padding: 12px;
-    }
-
-    @media (min-width: 700px) {
-      body {
-        max-width: 1000px;
-        margin: auto;
-      }
-
-      .cards {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
-    }
-  </style>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#071b14;color:white;font-family:Arial,sans-serif}
+header{text-align:center;padding:22px 10px;border-bottom:2px solid #d4af37;margin-bottom:22px}
+header h1{color:#d4af37;margin:0;font-size:29px}
+header p{letter-spacing:3px;font-size:12px}
+.panel{background:#102b20;border:1px solid #315b43;border-radius:12px;padding:17px;margin-bottom:18px}
+h2{color:#d4af37;font-size:20px}
+input,select{display:block;width:100%;padding:13px;margin:12px 0;border-radius:7px;border:1px solid #d4af37;background:#071b14;color:white;font-size:16px}
+button{background:#d4af37;color:#071b14;border:0;padding:12px 16px;border-radius:7px;font-weight:bold;cursor:pointer;margin:5px 3px 5px 0}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{background:#315b43;color:white}
+button.danger{background:#a83232;color:white}
+#dashboard{display:none}
+#message,#dashboardMessage,#usersMessage,#fixturesMessage,#publishMessage,#tipsMessage{color:#ffd76a;overflow-wrap:anywhere}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.stat{background:#102b20;border:1px solid #d4af37;border-radius:10px;padding:15px 8px;text-align:center}
+.stat h3{color:#d4af37;font-size:25px;margin:5px}
+.stat p{font-size:13px;margin:5px}
+.user,.fixture,.tip{background:#071b14;border:1px solid #315b43;border-radius:10px;padding:13px;margin-top:12px;overflow-wrap:anywhere}
+.role{color:#ffd76a;font-weight:bold}
+.teams{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:center}
+.team{flex:1;min-width:0}
+.team img{width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 7px}
+.team-name{font-size:13px;font-weight:bold;overflow-wrap:anywhere}
+.versus{color:#d4af37;font-weight:bold}
+.fixture-info{border-top:1px solid #315b43;margin-top:12px;padding-top:8px;font-size:13px;color:#ddd}
+.tip-category{color:#ffd76a;font-weight:bold}
+@media(min-width:700px){body{max-width:1000px;margin:auto}.cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
 </head>
 
 <body>
 
 <header>
-  <h1>4U'S TIPS</h1>
-  <p>PREDICT SMARTER</p>
-  <small>ADMIN DASHBOARD</small>
+<h1>4U'S TIPS</h1>
+<p>PREDICT SMARTER</p>
+<small>ADMIN DASHBOARD</small>
 </header>
 
 <div class="panel" id="login">
-  <h2>Super Admin Login</h2>
-
-  <input
-    id="username"
-    type="text"
-    placeholder="Username"
-    autocomplete="username"
-  >
-
-  <input
-    id="password"
-    type="password"
-    placeholder="Password"
-    autocomplete="current-password"
-  >
-
-  <button id="loginButton" onclick="loginAdmin()">Login</button>
-  <p id="message"></p>
+<h2>Super Admin Login</h2>
+<input id="username" type="text" placeholder="Username" autocomplete="username">
+<input id="password" type="password" placeholder="Password" autocomplete="current-password">
+<button id="loginButton" onclick="loginAdmin()">Login</button>
+<p id="message"></p>
 </div>
 
 <div id="dashboard">
 
-  <div class="cards">
-    <div class="stat">
-      <p>Total Users</p>
-      <h3 id="totalUsers">...</h3>
-    </div>
+<div class="cards">
+<div class="stat"><p>Total Users</p><h3 id="totalUsers">...</h3></div>
+<div class="stat"><p>Total Tipsters</p><h3 id="totalTipsters">...</h3></div>
+<div class="stat"><p>Total Tips</p><h3 id="totalTips">...</h3></div>
+<div class="stat"><p>Premium Tips</p><h3 id="premiumTips">...</h3></div>
+</div>
 
-    <div class="stat">
-      <p>Total Tipsters</p>
-      <h3 id="totalTipsters">...</h3>
-    </div>
+<div class="panel">
+<h2>Manage Users</h2>
+<button onclick="loadUsers()">Refresh Users</button>
+<p id="usersMessage"></p>
+<div id="usersList"></div>
+</div>
 
-    <div class="stat">
-      <p>Total Tips</p>
-      <h3 id="totalTips">...</h3>
-    </div>
+<div class="panel" id="publishPanel">
+<h2>Publish New Tip</h2>
+<p>Chagua mechi kwenye Fixtures au andika jina la mechi.</p>
 
-    <div class="stat">
-      <p>Premium Tips</p>
-      <h3 id="premiumTips">...</h3>
-    </div>
-  </div>
+<input id="tipMatch" type="text" placeholder="Match Name">
 
-  <div class="panel">
-    <h2>Manage Users</h2>
-    <p>View users and manage their roles.</p>
+<input id="tipPrediction" type="text" placeholder="Prediction mfano: Home Win">
 
-    <button onclick="loadUsers()">Refresh Users</button>
-    <p id="usersMessage"></p>
-    <div id="usersList"></div>
-  </div>
+<input id="tipOdds" type="number" min="0.01" max="10000" step="0.01" placeholder="Odds (optional)">
 
-  <div class="panel">
-    <h2>Fixtures - Mechi za Leo na Kesho</h2>
-    <p>Mechi kutoka API-Football zikiwa na logo za timu.</p>
+<label for="tipCategory">Tip Category</label>
+<select id="tipCategory">
+<option value="FREE">FREE TIP</option>
+<option value="PREMIUM">PREMIUM TIP</option>
+</select>
 
-    <button onclick="loadFixtures()">Refresh Fixtures</button>
-    <p id="fixturesMessage"></p>
-    <div id="fixturesList"></div>
-  </div>
+<input id="tipKickoff" type="hidden">
 
-  <div class="panel">
-    <h2>Welcome, Super Admin</h2>
-    <p>4U'S TIPS management dashboard.</p>
+<button id="publishButton" onclick="publishTip()">PUBLISH TIP</button>
+<p id="publishMessage"></p>
+</div>
 
-    <button class="secondary" onclick="loadDashboard()">
-      Refresh Data
-    </button>
+<div class="panel">
+<h2>Fixtures - Mechi za Leo na Kesho</h2>
+<p>Chagua mechi unayotaka kuitabiri.</p>
+<button onclick="loadFixtures()">Refresh Fixtures</button>
+<p id="fixturesMessage"></p>
+<div id="fixturesList"></div>
+</div>
 
-    <button class="danger" onclick="logout()">
-      Logout
-    </button>
+<div class="panel">
+<h2>Published Tips</h2>
+<button onclick="loadTips()">Refresh Tips</button>
+<p id="tipsMessage"></p>
+<div id="tipsList"></div>
+</div>
 
-    <p id="dashboardMessage"></p>
-  </div>
+<div class="panel">
+<h2>Welcome, Super Admin</h2>
+<p>4U'S TIPS management dashboard.</p>
+<button class="secondary" onclick="refreshAll()">Refresh Data</button>
+<button class="danger" onclick="logout()">Logout</button>
+<p id="dashboardMessage"></p>
+</div>
 
 </div>
 
 <script>
-  // Dashboard na API viko kwenye Render service moja.
-  const API = window.location.origin;
+const API = window.location.origin;
+let adminToken = "";
 
-  let adminToken = "";
+async function requestJSON(path, options = {}) {
+  const headers = {
+    Accept: "application/json",
+    ...(options.headers || {})
+  };
 
-  // Soma majibu ya server kwa usalama.
-  async function requestJSON(path, options = {}) {
-    const headers = {
-      "Accept": "application/json",
-      ...(options.headers || {})
-    };
+  if (adminToken) {
+    headers.Authorization = "Bearer " + adminToken;
+  }
 
-    if (adminToken) {
-      headers.Authorization = "Bearer " + adminToken;
-    }
+  const response = await fetch(API + path, {
+    ...options,
+    headers
+  });
 
-    const response = await fetch(API + path, {
-      ...options,
-      headers
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    throw new Error("API haikurudisha JSON: " + path +
+      " (HTTP " + response.status + ")");
+  }
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Server error: " + response.status);
+  }
+
+  return data;
+}
+
+async function getData(path) {
+  return requestJSON(path);
+}
+
+// LOGIN
+async function loginAdmin() {
+  const message = document.getElementById("message");
+  const button = document.getElementById("loginButton");
+
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  if (!username || !password) {
+    message.textContent = "Weka username na password kwanza.";
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = "Inakagua login...";
+
+  try {
+    const data = await requestJSON("/api/auth/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username, password})
     });
 
-    const contentType =
-      response.headers.get("content-type") || "";
+    if (!data.token) throw new Error("Login token haikupatikana.");
 
-    if (!contentType.includes("application/json")) {
-      throw new Error(
-        "API haikurudisha JSON. Angalia endpoint: " + path +
-        " (HTTP " + response.status + ")"
-      );
-    }
+    adminToken = data.token;
 
-    const data = await response.json();
+    const me = await getData("/api/auth/me");
 
-    if (!response.ok) {
-      throw new Error(
-        data.error || "Hitilafu ya server (HTTP " +
-        response.status + ")"
-      );
-    }
-
-    return data;
-  }
-
-  async function getData(path) {
-    return requestJSON(path);
-  }
-
-  // LOGIN
-  async function loginAdmin() {
-    const message = document.getElementById("message");
-    const button = document.getElementById("loginButton");
-
-    const username =
-      document.getElementById("username").value.trim();
-
-    const password =
-      document.getElementById("password").value;
-
-    if (!username || !password) {
-      message.textContent =
-        "Weka username na password kwanza.";
-      return;
-    }
-
-    button.disabled = true;
-    message.textContent = "Inakagua login...";
-
-    try {
-      const data = await requestJSON("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ username, password })
-      });
-
-      if (!data.token) {
-        throw new Error("Server haikutoa login token.");
-      }
-
-      adminToken = data.token;
-
-      const me = await getData("/api/auth/me");
-
-      if (me.user?.role !== "SUPER_ADMIN") {
-        adminToken = "";
-        throw new Error(
-          "Super Admin pekee ndiye anayeruhusiwa."
-        );
-      }
-
-      document.getElementById("login").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-
-      message.textContent = "";
-
-      // Kila sehemu inajipakia kivyake.
-      await Promise.allSettled([
-        loadDashboard(),
-        loadUsers(),
-        loadFixtures()
-      ]);
-
-    } catch (error) {
+    if (me.user?.role !== "SUPER_ADMIN") {
       adminToken = "";
-      message.textContent = error.message;
-    } finally {
-      button.disabled = false;
-    }
-  }
-
-  // DASHBOARD STATISTICS
-  async function loadDashboard() {
-    const status =
-      document.getElementById("dashboardMessage");
-
-    status.textContent = "Inapakia takwimu...";
-
-    const results = await Promise.allSettled([
-      getData("/api/users"),
-      getData("/api/tipsters"),
-      getData("/api/tips")
-    ]);
-
-    let errors = [];
-
-    if (results[0].status === "fulfilled") {
-      const users = results[0].value.users || [];
-      document.getElementById("totalUsers").textContent =
-        users.length;
-    } else {
-      document.getElementById("totalUsers").textContent = "!";
-      errors.push("Users: " + results[0].reason.message);
+      throw new Error("Super Admin pekee ndiye anayeruhusiwa.");
     }
 
-    if (results[1].status === "fulfilled") {
-      const tipsters = results[1].value.tipsters || [];
-      document.getElementById("totalTipsters").textContent =
-        tipsters.length;
-    } else {
-      document.getElementById("totalTipsters").textContent = "!";
-      errors.push("Tipsters: " + results[1].reason.message);
-    }
+    document.getElementById("login").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    message.textContent = "";
 
-    if (results[2].status === "fulfilled") {
-      const tips = results[2].value.tips || [];
+    await refreshAll();
 
-      document.getElementById("totalTips").textContent =
-        tips.length;
-
-      document.getElementById("premiumTips").textContent =
-        tips.filter(tip => tip.category === "PREMIUM").length;
-    } else {
-      document.getElementById("totalTips").textContent = "!";
-      document.getElementById("premiumTips").textContent = "!";
-      errors.push("Tips: " + results[2].reason.message);
-    }
-
-    status.textContent = errors.length
-      ? "Baadhi ya takwimu hazikupatikana: " + errors.join(" | ")
-      : "Takwimu zimepakiwa vizuri.";
-  }
-
-  // MANAGE USERS
-  async function loadUsers() {
-    const status =
-      document.getElementById("usersMessage");
-
-    const list =
-      document.getElementById("usersList");
-
-    status.textContent = "Inapakia users...";
-    list.replaceChildren();
-
-    try {
-      const data = await getData("/api/users");
-      const users = data.users || [];
-
-      status.textContent = "Jumla ya users: " + users.length;
-
-      if (!users.length) {
-        list.textContent = "Hakuna users kwa sasa.";
-        return;
-      }
-
-      users.forEach(user => {
-        const card = document.createElement("div");
-        card.className = "user";
-
-        const name = document.createElement("p");
-        name.textContent = "Username: " + user.username;
-
-        const email = document.createElement("p");
-        email.textContent = "Email: " + user.email;
-
-        const role = document.createElement("p");
-        role.className = "role";
-        role.textContent = "Role: " + user.role;
-
-        card.append(name, email, role);
-
-        if (user.role !== "SUPER_ADMIN") {
-          const button = document.createElement("button");
-
-          if (user.role === "TIPSTER") {
-            button.textContent = "Make Customer";
-            button.className = "secondary";
-            button.onclick = () =>
-              changeRole(user.id, "CUSTOMER");
-          } else {
-            button.textContent = "Promote to Tipster";
-            button.onclick = () =>
-              changeRole(user.id, "TIPSTER");
-          }
-
-          card.appendChild(button);
-        }
-
-        list.appendChild(card);
-      });
-
-    } catch (error) {
-      status.textContent = error.message;
-    }
-  }
-
-  // CHANGE USER ROLE
-  async function changeRole(id, role) {
-    if (!confirm("Una uhakika unataka kubadilisha role?")) {
-      return;
-    }
-
-    const status =
-      document.getElementById("usersMessage");
-
-    status.textContent = "Inabadilisha role...";
-
-    try {
-      await requestJSON(
-        "/api/users/" + encodeURIComponent(id) + "/role",
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ role })
-        }
-      );
-
-      status.textContent = "Role imebadilishwa.";
-      await loadUsers();
-      await loadDashboard();
-
-    } catch (error) {
-      status.textContent = error.message;
-    }
-  }
-
-  // TEAM LOGO
-  function createTeam(name, logo) {
-    const team = document.createElement("div");
-    team.className = "team";
-
-    const image = document.createElement("img");
-    image.alt = name + " logo";
-    image.loading = "lazy";
-
-    image.onerror = function() {
-      this.style.display = "none";
-    };
-
-    if (logo) {
-      image.src = logo;
-    } else {
-      image.style.display = "none";
-    }
-
-    const label = document.createElement("div");
-    label.className = "team-name";
-    label.textContent = name || "Unknown Team";
-
-    team.append(image, label);
-    return team;
-  }
-
-  // FIXTURES
-  async function loadFixtures() {
-    const status =
-      document.getElementById("fixturesMessage");
-
-    const list =
-      document.getElementById("fixturesList");
-
-    status.textContent =
-      "Inapakia mechi za leo na kesho...";
-
-    list.replaceChildren();
-
-    try {
-      const data = await getData("/api/football/next");
-      const fixtures = data.fixtures || [];
-
-      if (!fixtures.length) {
-        status.textContent =
-          "Hakuna mechi zilizopatikana kwa leo na kesho.";
-        return;
-      }
-
-      status.textContent =
-        "Jumla ya mechi: " + fixtures.length;
-
-      fixtures.forEach(item => {
-        const card = document.createElement("div");
-        card.className = "fixture";
-
-        const teams = document.createElement("div");
-        teams.className = "teams";
-
-        const home = createTeam(
-          item.teams?.home?.name,
-          item.teams?.home?.logo
-        );
-
-        const versus = document.createElement("div");
-        versus.className = "versus";
-        versus.textContent = "VS";
-
-        const away = createTeam(
-          item.teams?.away?.name,
-          item.teams?.away?.logo
-        );
-
-        teams.append(home, versus, away);
-
-        const info = document.createElement("div");
-        info.className = "fixture-info";
-
-        const league = document.createElement("p");
-        league.textContent =
-          "Ligi: " + (item.league?.name || "Haijulikani") +
-          " - " + (item.league?.country || "");
-
-        const kickoff = document.createElement("p");
-        const date = item.fixture?.date
-          ? new Date(item.fixture.date)
-          : null;
-
-        kickoff.textContent = "Muda: " +
-          (date && !Number.isNaN(date.getTime())
-            ? date.toLocaleString("en-GB", {
-                timeZone: "Africa/Dar_es_Salaam",
-                dateStyle: "medium",
-                timeStyle: "short"
-              })
-            : "Haijulikani");
-
-        const matchStatus = document.createElement("p");
-        matchStatus.textContent =
-          "Hali: " +
-          (item.fixture?.status?.long || "Haijulikani");
-
-        info.append(league, kickoff, matchStatus);
-        card.append(teams, info);
-        list.appendChild(card);
-      });
-
-    } catch (error) {
-      status.textContent = error.message;
-    }
-  }
-
-  // LOGOUT
-  function logout() {
+  } catch (error) {
     adminToken = "";
-
-    document.getElementById("dashboard").style.display = "none";
-    document.getElementById("login").style.display = "block";
-
-    document.getElementById("password").value = "";
-    document.getElementById("message").textContent = "";
-
-    document.getElementById("usersList").replaceChildren();
-    document.getElementById("fixturesList").replaceChildren();
-
-    document.getElementById("totalUsers").textContent = "...";
-    document.getElementById("totalTipsters").textContent = "...";
-    document.getElementById("totalTips").textContent = "...";
-    document.getElementById("premiumTips").textContent = "...";
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
   }
-</script>
+}
 
-</body>
-</html>
+// DASHBOARD STATISTICS
+async function loadDashboard() {
+  const status = document.getElementById("dashboardMessage");
+  status.textContent = "Inapakia takwimu...";
+
+  const results = await Promise.allSettled([
+    getData("/api/users"),
+    getData("/api/tipsters"),
+    getData("/api/tips")
+  ]);
+
+  const errors = [];
+
+  if (results[0].status === "fulfilled") {
+    document.getElementById("totalUsers").textContent =
+      (results[0].value.users || []).length;
+  } else {
+    document.getElementById("totalUsers").textContent = "!";
+    errors.push("Users: " + results[0].reason.message);
+  }
+
+  if (results[1].status === "fulfilled") {
+    document.getElementById("totalTipsters").textContent =
+      (results[1].value.tipsters || []).length;
+  } else {
+    document.getElementById("totalTipsters").textContent = "!";
+    errors.push("Tipsters: " + results[1].reason.message);
+  }
+
+  if (results[2].status === "fulfilled") {
+    const tips = results[2].value.tips || [];
+    document.getElementById("totalTips").textContent = tips.length;
+    document.getElementById("premiumTips").textContent =
+      tips.filter(t => t.category === "PREMIUM").length;
+  } else {
+    document.getElementById("totalTips").textContent = "!";
+    document.getElementById("premiumTips").textContent = "!";
+    errors.push("Tips: " + results[2].reason.message);
+  }
+
+  status.textContent = errors.length
+    ? errors.join(" | ")
+    : "Takwimu zimepakiwa vizuri.";
+}
+
+// USERS
+async function loadUsers() {
+  const status = document.getElementById("usersMessage");
+  const list = document.getElementById("usersList");
+
+  status.textContent = "Inapakia users...";
+  list.replaceChildren();
+
+  try {
+    const data = await getData("/api/users");
+    const users = data.users || [];
+
+    status.textContent = "Jumla ya users: " + users.length;
+
+    users.forEach(user => {
+      const card = document.createElement("div");
+      card.className = "user";
+
+      const name = document.createElement("p");
+      name.textContent = "Username: " + user.username;
+
+      const email = document.createElement("p");
+      email.textContent = "Email: " + user.email;
+
+      const role = document.createElement("p");
+      role.className = "role";
+      role.textContent = "Role: " + user.role;
+
+      card.append(name, email, role);
+
+      if (user.role !== "SUPER_ADMIN") {
+        const button = document.createElement("button");
+
+        if (user.role === "TIPSTER") {
+          button.textContent = "Make Customer";
+          button.className = "secondary";
+          button.onclick = () => changeRole(user.id, "CUSTOMER");
+        } else {
+          button.textContent = "Promote to Tipster";
+          button.onclick = () => changeRole(user.id, "TIPSTER");
+        }
+
+        card.appendChild(button);
+      }
+
+      list.appendChild(card);
+    });
+
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
+async function changeRole(id, role) {
+  if (!confirm("Una uhakika unataka kubadilisha role?")) return;
+
+  const status = document.getElementById("usersMessage");
+  status.textContent = "Inabadilisha role...";
+
+  try {
+    await requestJSON("/api/users/" + encodeURIComponent(id) + "/role", {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({role})
+    });
+
+    status.textContent = "Role imebadilishwa.";
+    await loadUsers();
+    await loadDashboard();
+
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
+// CHOOSE FIXTURE
+function chooseFixture(item) {
+  const home = item.teams?.home?.name || "";
+  const away = item.teams?.away?.name || "";
+
+  document.getElementById("tipMatch").value =
+    home + " vs " + away;
+
+  document.getElementBy
