@@ -4,7 +4,7 @@ async function footballRequest(params) {
   const apiKey = process.env.FOOTBALL_API_KEY;
 
   if (!apiKey) {
-    throw new Error("FOOTBALL_API_KEY is missing");
+    throw new Error("FOOTBALL_API_KEY is missing in Render");
   }
 
   const url = new URL(`${API_BASE_URL}/fixtures`);
@@ -14,19 +14,22 @@ async function footballRequest(params) {
   });
 
   const response = await fetch(url, {
+    method: "GET",
     headers: {
       "x-apisports-key": apiKey
     }
   });
 
-  if (!response.ok) {
-    throw new Error(`Football API error: ${response.status}`);
-  }
-
   const data = await response.json();
 
+  if (!response.ok) {
+    throw new Error(
+      `HTTP ${response.status}: ${JSON.stringify(data.errors || data)}`
+    );
+  }
+
   if (data.errors && Object.keys(data.errors).length > 0) {
-    throw new Error("Football API returned an error");
+    throw new Error(JSON.stringify(data.errors));
   }
 
   return data.response || [];
