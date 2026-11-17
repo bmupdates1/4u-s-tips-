@@ -1,43 +1,276 @@
-async function loadTips(){
-  const list = document.getElementById("tipsList");
-  list.textContent = "Loading...";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4U'S TIPS</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#071b15;color:white}
+header{background:#063b2b;border-bottom:2px solid #d4af37;padding:20px;text-align:center}
+h1,h2{color:#d4af37}
+main{max-width:700px;margin:auto;padding:18px}
+.panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
+input,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
+button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
+.secondary{background:#063b2b;color:white;border:1px solid #d4af37}
+.hidden{display:none}
+.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
+.message,.stats{color:#d4af37;font-size:14px}
+.tipster-card{display:flex;align-items:center;gap:13px;cursor:pointer}
+.avatar{width:65px;height:65px;border-radius:50%;object-fit:cover;border:2px solid #d4af37;background:#063b2b}
+.tipster-info{flex:1;min-width:0}
+.tipster-info h3{margin:5px 0;color:#d4af37}
+</style>
+</head>
+<body>
+<header>
+<h1>4U'S TIPS</h1>
+<p>PREDICT SMARTER</p>
+</header>
+<main>
+<section id="authSection">
+<div class="panel">
+<h2>Customer Login</h2>
+<input id="loginUsername" placeholder="Username">
+<input id="loginPassword" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="loginMessage" class="message"></p>
+</div>
+<div class="panel">
+<h2>Create Customer Account</h2>
+<input id="registerUsername" placeholder="Choose username">
+<input id="registerEmail" type="email" placeholder="Email address">
+<input id="registerPassword" type="password" placeholder="Create password (12 characters minimum)">
+<button onclick="register()">Register</button>
+<p id="registerMessage" class="message"></p>
+</div>
+</section>
 
-  try {
-    const result = await request("/api/slips");
-    const slips = result.slips || [];
+<section id="customerSection" class="hidden">
+<div class="panel">
+<h2 id="welcome">Welcome</h2>
+<button class="secondary" onclick="loadTips()">Refresh Tips</button>
+<button class="secondary" onclick="loadTipsters()">Refresh Tipsters</button>
+<button onclick="logout()">Logout</button>
+</div>
+<div class="panel">
+<h2>FREE TIPS</h2>
+<div id="tipsList">Loading tips...</div>
+</div>
+<div class="panel">
+<h2>TOP TIPSTERS</h2>
+<p>Bonyeza picha au jina la Tipster kuona betting zake.</p>
+<div id="tipstersList">Loading tipsters...</div>
+</div>
+<div class="panel">
+<h2>PREMIUM TIPS</h2>
+<p>Premium tips zinahitaji malipo. Mfumo wa malipo utaunganishwa baadaye.</p>
+</div>
+</section>
+</main>
 
-    list.innerHTML = "";
+<script>
+const API=window.location.origin;
+let token=sessionStorage.getItem("4u_customer_token")||"";
 
-    if (!slips.length) {
-      list.textContent = "Hakuna FREE booking slips kwa sasa.";
-      return;
-    }
-
-    slips.forEach(slip => {
-      const card = document.createElement("div");
-      card.className = "tip";
-
-      const title = document.createElement("h3");
-      title.textContent = slip.title || "Booking Slip";
-
-      const odds = document.createElement("p");
-      odds.textContent = "Total Odds: " + (slip.totalOdds ?? "Not set");
-
-      const tipster = document.createElement("p");
-      tipster.textContent = "Tipster: " + (slip.tipster?.username || "Unknown");
-
-      card.append(title, odds, tipster);
-
-      (slip.bookingCodes || []).forEach(code => {
-        const p = document.createElement("p");
-        p.textContent = code.bookmaker + ": " + code.code;
-        card.appendChild(p);
-      });
-
-      list.appendChild(card);
-    });
-
-  } catch (error) {
-    list.textContent = error.message;
+async function request(path,options={}){
+ const response=await fetch(API+path,{
+  ...options,
+  headers:{
+   "Content-Type":"application/json",
+   ...(token?{"Authorization":"Bearer "+token}:{})
   }
+ });
+ const text=await response.text();
+ let data={};
+ try{data=JSON.parse(text);}
+ catch{throw new Error("Server response: "+text.slice(0,200));}
+ if(!response.ok)throw new Error(data.error||"HTTP Error "+response.status);
+ return data;
 }
+
+async function register(){
+ const message=document.getElementById("registerMessage");
+ try{
+  await request("/api/auth/register",{
+   method:"POST",
+   body:JSON.stringify({
+    username:document.getElementById("registerUsername").value.trim(),
+    email:document.getElementById("registerEmail").value.trim(),
+    password:document.getElementById("registerPassword").value
+   })
+  });
+  message.textContent="Account imetengenezwa! Sasa unaweza Login.";
+ }catch(error){message.textContent=error.message;}
+}
+
+async function login(){
+ const message=document.getElementById("loginMessage");
+ try{
+  const result=await request("/api/auth/login",{
+   method:"POST",
+   body:JSON.stringify({
+    username:document.getElementById("loginUsername").value.trim(),
+    password:document.getElementById("loginPassword").value
+   })
+  });
+  token=result.token;
+  sessionStorage.setItem("4u_customer_token",token);
+  const me=await request("/api/auth/me");
+  if(me.user.role!=="CUSTOMER")throw new Error("Tumia akaunti ya Customer.");
+  showCustomer(me.user.username);
+ }catch(error){
+  token="";
+  sessionStorage.removeItem("4u_customer_token");
+  message.textContent=error.message;
+ }
+}
+
+function showCustomer(username){
+ document.getElementById("authSection").classList.add("hidden");
+ document.getElementById("customerSection").classList.remove("hidden");
+ document.getElementById("welcome").textContent="Welcome, "+username;
+ loadTips();
+ loadTipsters();
+}
+
+async function loadTips(){
+ const list=document.getElementById("tipsList");
+ list.textContent="Loading...";
+ try{
+  const result=await request("/api/slips");
+  const slips=result.slips||[];
+  list.innerHTML="";
+
+  if(!slips.length){
+   list.textContent="Hakuna FREE booking slips kwa sasa.";
+   return;
+  }
+
+  slips.forEach(slip=>{
+   const card=document.createElement("div");
+   card.className="tip";
+
+   const title=document.createElement("h3");
+   title.textContent=slip.title||"Booking Slip";
+
+   const odds=document.createElement("p");
+   odds.textContent="Total Odds: "+(slip.totalOdds??"Not set");
+
+   const tipster=document.createElement("p");
+   tipster.textContent="Tipster: "+(slip.tipster?.username||"Unknown");
+
+   card.append(title,odds,tipster);
+
+   (slip.bookingCodes||[]).forEach(code=>{
+    const p=document.createElement("p");
+    p.textContent=code.bookmaker+": "+code.code;
+    card.appendChild(p);
+   });
+
+   list.appendChild(card);
+  });
+ }catch(error){
+  list.textContent=error.message;
+ }
+}
+
+async function loadTipsters(){
+ const list=document.getElementById("tipstersList");
+ list.textContent="Loading tipsters...";
+ try{
+  const result=await request("/api/tipsters");
+  const tipsters=result.tipsters||[];
+  list.innerHTML="";
+  if(!tipsters.length){
+   list.textContent="Hakuna Tipsters waliopatikana kwa sasa.";
+   return;
+  }
+  tipsters.forEach(tipster=>{
+   const card=document.createElement("div");
+   card.className="tip";
+   const row=document.createElement("div");
+   row.className="tipster-card";
+   row.onclick=()=>openTipster(tipster.id);
+
+   const img=document.createElement("img");
+   img.className="avatar";
+   img.src=tipster.profileImage||"https://placehold.co/100x100/063b2b/d4af37?text=4U";
+   img.alt="Tipster profile";
+   img.onerror=()=>{
+    img.onerror=null;
+    img.src="https://placehold.co/100x100/063b2b/d4af37?text=4U";
+   };
+
+   const info=document.createElement("div");
+   info.className="tipster-info";
+   const name=document.createElement("h3");
+   name.textContent=tipster.username;
+
+   const followers=document.createElement("p");
+   followers.className="stats";
+   followers.textContent="Followers: "+tipster.followers;
+
+   const accuracy=document.createElement("p");
+   accuracy.textContent="Winning probability: "+tipster.accuracy+"%";
+
+   const wins=document.createElement("p");
+   wins.textContent="Wins: "+tipster.wins+" | Losses: "+tipster.losses;
+
+   info.append(name,followers,accuracy,wins);
+   row.append(img,info);
+
+   const button=document.createElement("button");
+   button.textContent=tipster.isFollowing?"Unfollow":"Follow";
+   button.onclick=(event)=>{
+    event.stopPropagation();
+    changeFollow(tipster.id,tipster.isFollowing);
+   };
+
+   card.append(row,button);
+   list.appendChild(card);
+  });
+ }catch(error){
+  list.textContent=error.message;
+ }
+}
+
+function openTipster(id){
+ window.location.href="tipster-profile.html?id="+encodeURIComponent(id);
+}
+
+async function changeFollow(id,isFollowing){
+ try{
+  await request("/api/follows/"+encodeURIComponent(id),{
+   method:isFollowing?"DELETE":"POST"
+  });
+  await loadTipsters();
+ }catch(error){alert(error.message);}
+}
+
+function logout(){
+ token="";
+ sessionStorage.removeItem("4u_customer_token");
+ document.getElementById("customerSection").classList.add("hidden");
+ document.getElementById("authSection").classList.remove("hidden");
+ document.getElementById("loginPassword").value="";
+ document.getElementById("loginMessage").textContent="Umetoka kwenye akaunti.";
+}
+
+async function restoreSession(){
+ if(!token)return;
+ try{
+  const me=await request("/api/auth/me");
+  if(me.user.role!=="CUSTOMER")throw new Error("Not a customer");
+  showCustomer(me.user.username);
+ }catch(error){
+  token="";
+  sessionStorage.removeItem("4u_customer_token");
+ }
+}
+
+restoreSession();
+</script>
+</body>
+</html>
