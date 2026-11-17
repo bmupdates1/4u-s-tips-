@@ -9,28 +9,48 @@ const schema = z.object({
   ADMIN_PASSWORD: z.string().min(12).max(200)
 });
 
+if (
+  !process.env.ADMIN_USERNAME ||
+  !process.env.ADMIN_EMAIL ||
+  !process.env.ADMIN_PASSWORD
+) {
+  console.log("Admin credentials not configured. Skipping admin creation.");
+  process.exit(0);
+}
+
 const parsed = schema.safeParse(process.env);
+
 if (!parsed.success) {
-  console.error("Set ADMIN_USERNAME, ADMIN_EMAIL and ADMIN_PASSWORD (12+ chars) in your local environment.");
+  console.error("Invalid admin environment variables.");
   process.exit(1);
 }
 
 const { ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD } = parsed.data;
-const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
 try {
-  const existingAdmin = await prisma.user.findFirst({ where: { role: "SUPER_ADMIN" } });
-  if (existingAdmin) throw new Error("A Super Admin already exists. No new admin was created.");
-
-  await prisma.user.create({
-    data: {
-      username: ADMIN_USERNAME,
-      email: ADMIN_EMAIL,
-      passwordHash,
-      role: "SUPER_ADMIN"
-    }
+  const existingAdmin = await prisma.user.findFirst({
+    where: { role: "SUPER_ADMIN" }
   });
-  console.log(`Super Admin ${ADMIN_USERNAME} created. Keep credentials private.`);
+
+  if (existingAdmin) {
+    console.log("Super Admin already exists. Skipping creation.");
+  } else {
+    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+
+    await prisma.user.create({
+      data: {
+        username: ADMIN_USERNAME,
+        email: ADMIN_EMAIL,
+        passwordHash,
+        role: "SUPER_ADMIN"
+      }
+    });
+
+    console.log("Super Admin created successfully.");
+  }
+} catch (error) {
+  console.error("Admin creation failed:", error);
+  process.exitCode = 1;
 } finally {
   await prisma.$disconnect();
 }
