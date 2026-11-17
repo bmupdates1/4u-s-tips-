@@ -14,10 +14,15 @@ main{max-width:700px;margin:auto;padding:18px}
 .panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
 input,select,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
 button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
 .secondary{background:#063b2b;color:white;border:1px solid #d4af37}
 .message{color:#d4af37}
 .tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
 .hidden{display:none}
+.countdown{font-size:22px;font-weight:bold;color:#d4af37;text-align:center;margin:12px 0}
+.locked{color:#ff6969;font-weight:bold}
+.started{color:#72e6a1}
+label{display:block;margin-top:12px}
 </style>
 </head>
 <body>
@@ -26,6 +31,7 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 <p>TIPSTER DASHBOARD</p>
 </header>
 <main>
+
 <section id="loginSection">
 <div class="panel">
 <h2>Tipster Login</h2>
@@ -46,6 +52,7 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 
 <div class="panel">
 <h2>PUBLISH NEW BOOKING SLIP</h2>
+
 <input id="title" placeholder="Slip title" maxlength="100">
 <input id="riskLabel" placeholder="Risk label (optional)" maxlength="50">
 <input id="totalOdds" type="number" step="0.01" min="0.01" placeholder="Total odds">
@@ -56,13 +63,21 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 <label>BetPawa Booking Code</label>
 <input id="betpawaCode" placeholder="Enter BetPawa code">
 
+<label>Category</label>
 <select id="category">
 <option value="FREE">FREE</option>
 <option value="PREMIUM">PREMIUM</option>
 </select>
 
 <input id="price" type="number" min="0" step="0.01" placeholder="Price (0 for FREE)">
+
+<label>Kick-Off Date and Time</label>
+<input id="kickoffAt" type="datetime-local">
+
+<label>Slip Validity (optional)</label>
 <input id="validityUntil" type="datetime-local">
+
+<p class="message">Weka muda wa kuanza kwa mkeka. Countdown itaanza baada ya kubonyeza START KICK-OFF.</p>
 
 <button onclick="publishSlip()">PUBLISH BOOKING SLIP</button>
 <p id="publishMessage" class="message"></p>
@@ -78,6 +93,9 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 <script>
 const API=window.location.origin;
 let token="";
+let serverOffset=0;
+let countdownTimer=null;
+let lockingRequests=new Set();
 
 async function request(path,options={}){
  const response=await fetch(API+path,{
@@ -87,9 +105,20 @@ async function request(path,options={}){
    ...(token?{"Authorization":"Bearer "+token}:{})
   }
  });
+
+ // Synchronize countdown with the server's UTC clock.
+ const serverDate=response.headers.get("Date");
+ if(serverDate){
+  serverOffset=new Date(serverDate).getTime()-Date.now();
+ }
+
  const data=await response.json();
  if(!response.ok)throw new Error(data.error||"Request failed");
  return data;
+}
+
+function serverNow(){
+ return Date.now()+serverOffset;
 }
 
 async function login(){
@@ -102,16 +131,21 @@ async function login(){
     password:document.getElementById("password").value
    })
   });
+
   token=result.token;
   const me=await request("/api/auth/me");
+
   if(!["TIPSTER","SUPER_ADMIN"].includes(me.user.role)){
    token="";
    throw new Error("Akaunti hii si ya Tipster.");
   }
+
   document.getElementById("loginSection").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
   document.getElementById("welcome").textContent="Welcome, "+me.user.username;
+
   await loadMySlips();
+
  }catch(error){
   token="";
   message.textContent=error.message;
@@ -120,6 +154,7 @@ async function login(){
 
 async function publishSlip(){
  const message=document.getElementById("publishMessage");
+
  try{
   const category=document.getElementById("category").value;
   const price=Number(document.getElementById("price").value||0);
@@ -130,11 +165,20 @@ async function publishSlip(){
 
   if(sporty)bookingCodes.push({bookmaker:"SportyBet",code:sporty});
   if(betpawa)bookingCodes.push({bookmaker:"BetPawa",code:betpawa});
+
   if(!bookingCodes.length)throw new Error("Weka angalau Booking Code moja.");
   if(category==="FREE"&&price!==0)throw new Error("FREE slip lazima iwe na bei 0.");
   if(category==="PREMIUM"&&price<=0)throw new Error("PREMIUM slip lazima iwe na bei zaidi ya 0.");
 
+  const kickoff=document.getElementById("kickoffAt").value;
+  if(!kickoff)throw new Error("Weka tarehe na muda wa Kick-Off.");
+
+  const kickoffDate=new Date(kickoff);
+  if(isNaN(kickoffDate.getTime()))throw new Error("Tarehe ya Kick-Off si sahihi.");
+  if(kickoffDate.getTime()<=serverNow())throw new Error("Kick-Off lazima iwe muda wa baadaye.");
+
   const validity=document.getElementById("validityUntil").value;
+
   await request("/api/slips",{
    method:"POST",
    body:JSON.stringify({
@@ -143,44 +187,158 @@ async function publishSlip(){
     totalOdds:Number(document.getElementById("totalOdds").value),
     price,
     category,
+    kickoffAt:kickoffDate.toISOString(),
     validityUntil:validity?new Date(validity).toISOString():undefined,
     bookingCodes
    })
   });
 
   message.textContent="Booking Slip imechapishwa kikamilifu!";
-  ["title","riskLabel","totalOdds","sportyCode","betpawaCode","price","validityUntil"].forEach(id=>document.getElementById(id).value="");
+
+  ["title","riskLabel","totalOdds","sportyCode","betpawaCode","price","kickoffAt","validityUntil"].forEach(id=>{
+   document.getElementById(id).value="";
+  });
+
   await loadMySlips();
+
  }catch(error){
   message.textContent=error.message;
  }
 }
 
+async function startKickoff(id,button){
+ if(!confirm("Una uhakika kuanzisha countdown ya mkeka huu? Huwezi kuanzisha tena baada ya kuanza.")){
+  return;
+ }
+
+ button.disabled=true;
+
+ try{
+  const result=await request("/api/slips/"+encodeURIComponent(id)+"/start-kickoff",{
+   method:"PATCH",
+   body:JSON.stringify({})
+  });
+
+  if(result.serverTime){
+   serverOffset=new Date(result.serverTime).getTime()-Date.now();
+  }
+
+  document.getElementById("dashboardMessage").textContent="START KICK-OFF imefanikiwa!";
+  await loadMySlips();
+
+ }catch(error){
+  button.disabled=false;
+  document.getElementById("dashboardMessage").textContent=error.message;
+ }
+}
+
+function formatCountdown(milliseconds){
+ const seconds=Math.max(0,Math.floor(milliseconds/1000));
+ const hours=Math.floor(seconds/3600);
+ const minutes=Math.floor((seconds%3600)/60);
+ const remaining=seconds%60;
+
+ return String(hours).padStart(2,"0")+":"+
+        String(minutes).padStart(2,"0")+":"+
+        String(remaining).padStart(2,"0");
+}
+
 async function loadMySlips(){
  const list=document.getElementById("mySlips");
  list.textContent="Loading...";
+
+ if(countdownTimer){
+  clearInterval(countdownTimer);
+  countdownTimer=null;
+ }
+
  try{
   const result=await request("/api/slips/mine");
   const slips=result.slips||[];
+
   list.innerHTML="";
+  lockingRequests.clear();
+
   if(!slips.length){
    list.textContent="Bado hujachapisha Booking Slip.";
    return;
   }
+
   slips.forEach(slip=>{
    const card=document.createElement("div");
    card.className="tip";
+
    const title=document.createElement("h3");
    title.textContent=slip.title;
+
    const odds=document.createElement("p");
    odds.textContent="Total Odds: "+slip.totalOdds;
+
    const category=document.createElement("p");
    category.textContent="Category: "+slip.category;
+
    const codes=document.createElement("p");
-   codes.textContent=(slip.bookingCodes||[]).map(x=>x.bookmaker+": "+x.code).join(" | ");
-   card.append(title,odds,category,codes);
+   codes.textContent=(slip.bookingCodes||[])
+    .map(x=>x.bookmaker+": "+x.code).join(" | ");
+
+   const kickoff=document.createElement("p");
+   kickoff.textContent=slip.kickoffAt
+    ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
+    :"Kick-Off: Not set";
+
+   const status=document.createElement("p");
+   const countdown=document.createElement("div");
+   countdown.className="countdown";
+
+   card.append(title,odds,category,codes,kickoff);
+
+   if(slip.isLocked){
+    status.className="locked";
+    status.textContent="LOCKED - KICK-OFF TIME REACHED";
+    card.append(status);
+
+   }else if(slip.kickoffStartedAt && slip.kickoffAt){
+    status.className="started";
+    status.textContent="KICK-OFF COUNTDOWN STARTED";
+    card.append(status,countdown);
+
+   }else if(slip.kickoffAt){
+    status.textContent="Countdown haijaanza.";
+    const startButton=document.createElement("button");
+    startButton.textContent="START KICK-OFF";
+    startButton.onclick=()=>startKickoff(slip.id,startButton);
+    card.append(status,startButton);
+
+   }else{
+    status.textContent="Hakuna muda wa Kick-Off uliowekwa.";
+    card.append(status);
+   }
+
    list.appendChild(card);
+
+   if(slip.kickoffStartedAt && slip.kickoffAt && !slip.isLocked){
+    const kickoffTime=new Date(slip.kickoffAt).getTime();
+
+    const updateCountdown=()=>{
+     const remaining=kickoffTime-serverNow();
+
+     if(remaining<=0){
+      countdown.textContent="KICK-OFF IMEFIKA!";
+      if(!lockingRequests.has(slip.id)){
+       lockingRequests.add(slip.id);
+       loadMySlips();
+      }
+      return;
+     }
+
+     countdown.textContent="Starts after "+formatCountdown(remaining);
+    };
+
+    updateCountdown();
+    countdownTimer=setInterval(updateCountdown,1000);
+   }
   });
+
  }catch(error){
   list.textContent=error.message;
  }
@@ -188,6 +346,12 @@ async function loadMySlips(){
 
 function logout(){
  token="";
+
+ if(countdownTimer){
+  clearInterval(countdownTimer);
+  countdownTimer=null;
+ }
+
  document.getElementById("dashboard").classList.add("hidden");
  document.getElementById("loginSection").classList.remove("hidden");
  document.getElementById("password").value="";
