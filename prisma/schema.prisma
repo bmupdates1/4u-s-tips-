@@ -91,8 +91,11 @@ model Slip {
   price         Decimal       @default(0) @db.Decimal(10, 2)
   category      TipCategory   @default(FREE)
   isPublished   Boolean       @default(true)
-  validityUntil DateTime?
-  bookingCodes  BookingCode[]
+    validityUntil    DateTime?
+  kickoffAt        DateTime?
+  kickoffStartedAt DateTime?
+  isLocked         Boolean       @default(false)
+  bookingCodes     BookingCode[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
