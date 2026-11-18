@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
@@ -43,7 +42,6 @@ router.get("/", async (req, res) => {
     });
 
     return res.json({ tips });
-
   } catch (error) {
     console.error("Fetch tips error:", error);
     return res.status(500).json({
@@ -95,11 +93,43 @@ router.post("/", async (req, res) => {
       message: "Tip published successfully",
       tip
     });
-
   } catch (error) {
     console.error("Publish tip error:", error);
     return res.status(500).json({
       error: "Could not publish tip"
+    });
+  }
+});
+
+// DELETE OWN TIP
+router.delete("/:id", async (req, res) => {
+  if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
+    return res.status(403).json({
+      error: "Only Tipsters and Admin can delete tips"
+    });
+  }
+
+  try {
+    const deleted = await prisma.tip.deleteMany({
+      where: {
+        id: req.params.id,
+        tipsterId: req.user.id
+      }
+    });
+
+    if (deleted.count !== 1) {
+      return res.status(404).json({
+        error: "Tip not found or you are not allowed to delete it"
+      });
+    }
+
+    return res.json({
+      message: "Tip deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete tip error:", error);
+    return res.status(500).json({
+      error: "Could not delete tip"
     });
   }
 });
@@ -132,7 +162,6 @@ router.patch("/:id/result", requireSuperAdmin, async (req, res) => {
       message: "Tip result updated",
       tip
     });
-
   } catch (error) {
     if (error.code === "P2025") {
       return res.status(404).json({
