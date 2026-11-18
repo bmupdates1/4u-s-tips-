@@ -83,7 +83,7 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(",") || false
 }));
 
-app.use(express.json({ limit: "20kb" }));
+app.use(express.json({ limit: "2mb" }));
 app.use(express.static("src/public"));
 
 app.use(rateLimit({
