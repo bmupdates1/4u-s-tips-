@@ -1,57 +1,313 @@
+
 <!DOCTYPE html>
 <html lang="sw">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4U-S-TIPS - Sports Predictions Platform</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #0f172a;
-            color: #ffffff;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-        }
-        header {
-            background-color: #1e293b;
-            padding: 20px;
-            border-bottom: 2px solid #22c55e;
-        }
-        h1 {
-            color: #22c55e;
-            margin: 0;
-        }
-        .container {
-            padding: 40px 20px;
-        }
-        .btn {
-            background-color: #22c55e;
-            color: white;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 20px;
-        }
-        .btn:hover {
-            background-color: #16a34a;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4U'S TIPS | Tipsters</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:#071b15;
+ color:white;
+}
+
+header{
+ background:#063b2b;
+ border-bottom:2px solid #d4af37;
+ padding:20px 15px;
+ text-align:center;
+}
+
+header h1{
+ color:#d4af37;
+ margin:0;
+}
+
+header p{
+ margin:7px 0 0;
+}
+
+main{
+ max-width:1000px;
+ margin:auto;
+ padding:20px;
+}
+
+.heading{
+ text-align:center;
+ margin:25px 0;
+}
+
+.heading h2{
+ color:#d4af37;
+}
+
+#tipstersList{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+ gap:16px;
+}
+
+.card{
+ background:#102a21;
+ border:1px solid #315644;
+ border-radius:12px;
+ padding:18px;
+ text-align:center;
+}
+
+.avatar{
+ width:100px;
+ height:100px;
+ border-radius:50%;
+ object-fit:cover;
+ border:3px solid #d4af37;
+}
+
+.card h3{
+ color:#d4af37;
+ margin:12px 0;
+}
+
+.stats{
+ color:#d4af37;
+ line-height:1.8;
+}
+
+.accuracy{
+ font-size:20px;
+ font-weight:bold;
+ color:#35d39a;
+}
+
+button{
+ width:100%;
+ padding:12px;
+ margin-top:9px;
+ border:0;
+ border-radius:7px;
+ background:#d4af37;
+ color:#102a21;
+ font-weight:bold;
+ cursor:pointer;
+}
+
+button:hover{
+ opacity:.85;
+}
+
+.secondary{
+ background:#063b2b;
+ color:white;
+ border:1px solid #d4af37;
+}
+
+.message{
+ text-align:center;
+ color:#d4af37;
+ padding:20px;
+}
+
+footer{
+ text-align:center;
+ padding:20px;
+ color:#aaa;
+ border-top:1px solid #315644;
+ margin-top:30px;
+}
+
+</style>
 </head>
+
 <body>
 
-    <header>
-        <h1>4U-S-TIPS ⚽</h1>
-        <p>Jukwaa Lako la Kuaminika la Utabiri wa Michezo</p>
-    </header>
+<header>
+ <h1>4U'S TIPS ⚽</h1>
+ <p>PREDICT SMARTER</p>
+</header>
 
-    <div class="container">
-        <h2>Karibu kwenye Utabiri Bora wa Leo!</h2>
-        <p>Tunakuletea wachanganuzi na takwimu sahihi za mechi mbalimbali duniani.</p>
-        <a href="#" class="btn">Angalia Tips za Leo</a>
-    </div>
+<main>
+
+ <section class="heading">
+  <h2>TOP TIPSTERS</h2>
+  <p>Wafuate wachanganuzi bora na uone utabiri wao.</p>
+ </section>
+
+ <div id="tipstersList">
+  <p class="message">Loading Tipsters...</p>
+ </div>
+
+</main>
+
+<footer>
+ <p>© 2026 4U'S TIPS. All Rights Reserved.</p>
+ <p>Predict Smarter ⚽</p>
+</footer>
+
+<script>
+const API=window.location.origin;
+
+let token="";
+
+async function apiRequest(path,options={}){
+ const response=await fetch(API+path,{
+  ...options,
+  headers:{
+   "Content-Type":"application/json",
+   "Authorization":"Bearer "+token,
+   ...(options.headers||{})
+  }
+ });
+
+ const data=await response.json();
+
+ if(!response.ok){
+  throw new Error(data.error||"Request failed");
+ }
+
+ return data;
+}
+
+function showMessage(message){
+ const list=document.getElementById("tipstersList");
+ list.innerHTML="";
+
+ const p=document.createElement("p");
+ p.className="message";
+ p.textContent=message;
+
+ list.appendChild(p);
+}
+
+function openTipster(id){
+ window.location.href=
+  "tipster-profile.html?id="+encodeURIComponent(id);
+}
+
+async function changeFollow(id,isFollowing){
+ try{
+  await apiRequest(
+   "/api/follows/"+encodeURIComponent(id),
+   {
+    method:isFollowing?"DELETE":"POST"
+   }
+  );
+
+  await loadTipsters();
+
+ }catch(error){
+  alert(error.message);
+ }
+}
+
+function createTipsterCard(t){
+ const card=document.createElement("div");
+ card.className="card";
+
+ const img=document.createElement("img");
+ img.className="avatar";
+ img.src=t.profileImage||
+  "https://placehold.co/120x120/063b2b/d4af37?text=4U";
+
+ img.alt=t.username||"Tipster";
+
+ img.onerror=()=>{
+  img.src="https://placehold.co/120x120/063b2b/d4af37?text=4U";
+ };
+
+ const name=document.createElement("h3");
+ name.textContent=t.username;
+
+ const accuracy=document.createElement("p");
+ accuracy.className="accuracy";
+ accuracy.textContent=t.accuracy+"%";
+
+ const accuracyLabel=document.createElement("p");
+ accuracyLabel.textContent="Winning Accuracy";
+
+ const followers=document.createElement("p");
+ followers.className="stats";
+ followers.textContent="Followers: "+t.followers;
+
+ const record=document.createElement("p");
+ record.textContent=
+  "Wins: "+t.wins+" | Losses: "+t.losses;
+
+ const follow=document.createElement("button");
+ follow.className="secondary";
+ follow.textContent=t.isFollowing?"Unfollow":"Follow";
+
+ follow.onclick=()=>{
+  changeFollow(t.id,t.isFollowing);
+ };
+
+ const view=document.createElement("button");
+ view.textContent="VIEW PROFILE";
+ view.onclick=()=>openTipster(t.id);
+
+ card.append(
+  img,
+  name,
+  accuracy,
+  accuracyLabel,
+  followers,
+  record,
+  follow,
+  view
+ );
+
+ return card;
+}
+
+async function loadTipsters(){
+ try{
+  const savedToken=
+   sessionStorage.getItem("4u_customer_token");
+
+  if(!savedToken){
+   showMessage(
+    "Tafadhali login kwanza kupitia Customer Account ili kuona Tipsters."
+   );
+   return;
+  }
+
+  token=savedToken;
+
+  const me=await apiRequest("/api/auth/me");
+
+  if(me.user.role!=="CUSTOMER"){
+   showMessage("Tumia akaunti ya Customer kuona Tipsters.");
+   return;
+  }
+
+  const result=await apiRequest("/api/tipsters");
+
+  const list=document.getElementById("tipstersList");
+  list.innerHTML="";
+
+  const tipsters=result.tipsters||[];
+
+  if(!tipsters.length){
+   showMessage("Hakuna Tipsters waliopatikana kwa sasa.");
+   return;
+  }
+
+  tipsters.forEach(t=>{
+   list.appendChild(createTipsterCard(t));
+  });
+
+ }catch(error){
+  showMessage(error.message);
+ }
+}
+
+loadTipsters();
+</script>
 
 </body>
 </html>
