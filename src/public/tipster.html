@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="sw">
 <head>
@@ -18,7 +19,7 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 button:disabled{opacity:.5;cursor:not-allowed}
 .secondary{background:#063b2b;color:white;border:1px solid #d4af37}
 .message{color:#d4af37}
-.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
+.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0;overflow-wrap:anywhere}
 .hidden{display:none}
 .countdown{font-size:22px;font-weight:bold;color:#d4af37;text-align:center;margin:12px 0}
 .locked{color:#ff6969;font-weight:bold}
@@ -27,14 +28,9 @@ label{display:block;margin-top:12px}
 .free-title{color:#35d39a}
 .premium-title{color:#d4af37}
 .profile-preview{
- display:block;
- width:120px;
- height:120px;
- object-fit:cover;
- border-radius:50%;
- border:2px solid #d4af37;
- margin:12px auto;
- background:#071b15;
+ display:block;width:120px;height:120px;object-fit:cover;
+ border-radius:50%;border:2px solid #d4af37;
+ margin:12px auto;background:#071b15;
 }
 .history-heading{color:#ff9696}
 .active-heading{color:#72e6a1}
@@ -56,7 +52,7 @@ label{display:block;margin-top:12px}
 <h2>Tipster Login</h2>
 <input id="username" placeholder="Username">
 <input id="password" type="password" placeholder="Password">
-<button onclick="login()">LOGIN</button>
+<button id="loginButton" onclick="login()">LOGIN</button>
 <p id="loginMessage" class="message"></p>
 </div>
 </section>
@@ -86,7 +82,6 @@ src="https://placehold.co/120x120/063b2b/d4af37?text=4U"
 >
 
 <label>Chagua picha kutoka Gallery</label>
-
 <input
 id="profilePictureFile"
 type="file"
@@ -168,24 +163,16 @@ Weka muda wa Kick-Off. Countdown itaanza moja kwa moja baada ya kuchapisha Booki
 <p id="publishMessage" class="message"></p>
 </div>
 
-<!-- ACTIVE BOOKING SLIPS -->
-
 <div class="panel">
 <h2 class="active-heading">ACTIVE BOOKING SLIPS</h2>
 <p class="message">Booking Slips ambazo muda wa Kick-Off bado haujafika.</p>
-<div id="myActiveSlips">
-Login kwanza...
+<div id="myActiveSlips">Login kwanza...</div>
 </div>
-</div>
-
-<!-- BOOKING SLIP HISTORY -->
 
 <div class="panel">
 <h2 class="history-heading">BOOKING SLIP HISTORY</h2>
 <p class="message">Slips zilizofikia muda wa Kick-Off zitahifadhiwa hapa pamoja na booking codes zake.</p>
-<div id="mySlipHistory">
-History itaonekana hapa...
-</div>
+<div id="mySlipHistory">History itaonekana hapa...</div>
 </div>
 
 </section>
@@ -199,6 +186,12 @@ let token="";
 let currentUserId="";
 let serverOffset=0;
 let countdownTimer=null;
+
+/* PREVENT REPEATED SLIP REQUESTS */
+let slipsLoading=false;
+let countdownRefreshInProgress=false;
+
+/* API REQUEST */
 
 async function request(path,options={}){
 
@@ -242,6 +235,12 @@ function serverNow(){
 async function login(){
 
  const message=document.getElementById("loginMessage");
+ const button=document.getElementById("loginButton");
+
+ if(button.disabled)return;
+
+ button.disabled=true;
+ message.textContent="Inaingia...";
 
  try{
 
@@ -270,6 +269,8 @@ async function login(){
   document.getElementById("welcome").textContent=
    "Welcome, "+me.user.username;
 
+  message.textContent="";
+
   await loadProfilePicture();
   await loadMyTips();
   await loadMySlips();
@@ -279,6 +280,10 @@ async function login(){
   token="";
   currentUserId="";
   message.textContent=error.message;
+
+ }finally{
+
+  button.disabled=false;
 
  }
 
@@ -526,9 +531,7 @@ async function loadMyTips(){
   list.innerHTML="";
 
   if(!tips.length){
-
    list.textContent="Bado hujachapisha Match Tip.";
-
    return;
   }
 
@@ -586,8 +589,18 @@ async function publishSlip(){
 
  try{
 
+  const title=document.getElementById("title").value.trim();
+  const totalOdds=Number(document.getElementById("totalOdds").value);
   const category=document.getElementById("category").value;
   const price=Number(document.getElementById("price").value||0);
+
+  if(!title){
+   throw new Error("Weka jina la Booking Slip.");
+  }
+
+  if(!Number.isFinite(totalOdds)||totalOdds<=0){
+   throw new Error("Weka Total Odds sahihi.");
+  }
 
   const bookingCodes=[];
 
@@ -610,6 +623,10 @@ async function publishSlip(){
 
   if(!bookingCodes.length){
    throw new Error("Weka angalau Booking Code moja.");
+  }
+
+  if(!Number.isFinite(price)||price<0){
+   throw new Error("Weka bei sahihi.");
   }
 
   if(category==="FREE"&&price!==0){
@@ -638,18 +655,29 @@ async function publishSlip(){
 
   const validity=document.getElementById("validityUntil").value;
 
+  let validityISO;
+
+  if(validity){
+
+   const validityDate=new Date(validity);
+
+   if(isNaN(validityDate.getTime())){
+    throw new Error("Slip Validity si sahihi.");
+   }
+
+   validityISO=validityDate.toISOString();
+  }
+
   await request("/api/slips",{
    method:"POST",
    body:JSON.stringify({
-    title:document.getElementById("title").value.trim(),
+    title,
     riskLabel:document.getElementById("riskLabel").value.trim()||undefined,
-    totalOdds:Number(document.getElementById("totalOdds").value),
+    totalOdds,
     price,
     category,
     kickoffAt:kickoffDate.toISOString(),
-    validityUntil:validity
-     ?new Date(validity).toISOString()
-     :undefined,
+    validityUntil:validityISO,
     bookingCodes
    })
   });
@@ -678,6 +706,8 @@ async function publishSlip(){
  }
 
 }
+
+/* COUNTDOWN FORMAT */
 
 function formatCountdown(milliseconds){
 
@@ -772,8 +802,16 @@ function createSlipCard(slip,isHistory){
 
 async function loadMySlips(){
 
+ /* Zuia request nyingine wakati request ya kwanza inaendelea */
+ if(slipsLoading)return;
+
  const activeList=document.getElementById("myActiveSlips");
  const historyList=document.getElementById("mySlipHistory");
+
+ if(!activeList||!historyList)return;
+
+ slipsLoading=true;
+ countdownRefreshInProgress=false;
 
  activeList.textContent="Loading...";
  historyList.textContent="Loading...";
@@ -803,7 +841,6 @@ async function loadMySlips(){
   }
 
   const countdownEntries=[];
-
   const activeSlips=[];
   const historySlips=[];
 
@@ -840,7 +877,7 @@ async function loadMySlips(){
 
    activeList.appendChild(item.card);
 
-   if(item.countdown){
+   if(item.countdown&&Number.isFinite(item.kickoffTime)){
 
     countdownEntries.push({
      kickoffTime:item.kickoffTime,
@@ -877,8 +914,6 @@ async function loadMySlips(){
 
   /* AUTOMATIC COUNTDOWN */
 
-  let refreshing=false;
-
   const updateCountdowns=()=>{
 
    let expired=false;
@@ -900,9 +935,10 @@ async function loadMySlips(){
 
    });
 
-   if(expired&&!refreshing){
+   /* Refresh mara moja tu baada ya Kick-Off kufika */
+   if(expired&&!countdownRefreshInProgress){
 
-    refreshing=true;
+    countdownRefreshInProgress=true;
 
     if(countdownTimer){
      clearInterval(countdownTimer);
@@ -926,6 +962,10 @@ async function loadMySlips(){
   activeList.textContent=error.message;
   historyList.textContent=error.message;
 
+ }finally{
+
+  slipsLoading=false;
+
  }
 
 }
@@ -942,6 +982,9 @@ function logout(){
   countdownTimer=null;
  }
 
+ slipsLoading=false;
+ countdownRefreshInProgress=false;
+
  document.getElementById("dashboard").classList.add("hidden");
  document.getElementById("loginSection").classList.remove("hidden");
 
@@ -953,6 +996,10 @@ function logout(){
  document.getElementById("profilePictureMessage").textContent="";
 
  document.getElementById("profilePictureFile").value="";
+
+ document.getElementById("myTips").textContent="Login kwanza...";
+ document.getElementById("myActiveSlips").textContent="Login kwanza...";
+ document.getElementById("mySlipHistory").textContent="Login kwanza...";
 
 }
 
