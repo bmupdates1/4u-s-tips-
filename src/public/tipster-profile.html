@@ -240,7 +240,10 @@ function renderSlip(slip,list){
  countdown.className="countdown";
  countdown.textContent="--:--:--";
  countdown.dataset.kickoff=slip.kickoffAt||"";
- countdown.dataset.locked=slip.isLocked?"true":"false";
+
+ /* PREMIUM countdown remains active even when Premium codes are access-locked */
+ countdown.dataset.locked =
+  slip.isLocked && slip.category !== "PREMIUM" ? "true" : "false";
 
  card.append(title,category,odds,kickoff,countdownLabel,countdown);
 
