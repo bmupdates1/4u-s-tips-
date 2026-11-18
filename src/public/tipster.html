@@ -170,7 +170,7 @@ PREMIUM itaonekana LOCKED kwa Customers.
 <input id="validityUntil" type="datetime-local">
 
 <p class="message">
-Weka muda wa kuanza kwa mkeka. Countdown itaanza baada ya kubonyeza START KICK-OFF.
+Weka muda wa Kick-Off. Countdown itaanza moja kwa moja baada ya kuchapisha Booking Slip.
 </p>
 
 <button onclick="publishSlip()">PUBLISH BOOKING SLIP</button>
@@ -193,7 +193,6 @@ let token="";
 let currentUserId="";
 let serverOffset=0;
 let countdownTimer=null;
-let lockingRequests=new Set();
 
 async function request(path,options={}){
 
@@ -674,46 +673,6 @@ async function publishSlip(){
 
 }
 
-/* START KICK-OFF */
-
-async function startKickoff(id,button){
-
- if(!confirm("Una uhakika kuanzisha countdown ya mkeka huu? Huwezi kuanzisha tena baada ya kuanza.")){
-  return;
- }
-
- button.disabled=true;
-
- try{
-
-  const result=await request(
-   "/api/slips/"+encodeURIComponent(id)+"/start-kickoff",
-   {
-    method:"PATCH",
-    body:JSON.stringify({})
-   }
-  );
-
-  if(result.serverTime){
-   serverOffset=new Date(result.serverTime).getTime()-Date.now();
-  }
-
-  document.getElementById("dashboardMessage").textContent=
-   "START KICK-OFF imefanikiwa!";
-
-  await loadMySlips();
-
- }catch(error){
-
-  button.disabled=false;
-
-  document.getElementById("dashboardMessage").textContent=
-   error.message;
-
- }
-
-}
-
 function formatCountdown(milliseconds){
 
  const seconds=Math.max(0,Math.floor(milliseconds/1000));
@@ -728,7 +687,7 @@ function formatCountdown(milliseconds){
 
 }
 
-/* LOAD MY BOOKING SLIPS */
+/* LOAD MY BOOKING SLIPS - AUTOMATIC COUNTDOWN */
 
 async function loadMySlips(){
 
@@ -744,18 +703,16 @@ async function loadMySlips(){
  try{
 
   const result=await request("/api/slips/mine");
-
   const slips=result.slips||[];
 
   list.innerHTML="";
-  lockingRequests.clear();
 
   if(!slips.length){
-
    list.textContent="Bado hujachapisha Booking Slip.";
-
    return;
   }
+
+  const countdownEntries=[];
 
   slips.forEach(slip=>{
 
@@ -797,24 +754,17 @@ async function loadMySlips(){
 
     card.append(status);
 
-   }else if(slip.kickoffStartedAt&&slip.kickoffAt){
+   }else if(slip.kickoffAt){
 
     status.className="started";
-    status.textContent="KICK-OFF COUNTDOWN STARTED";
+    status.textContent="AUTOMATIC COUNTDOWN";
 
     card.append(status,countdown);
 
-   }else if(slip.kickoffAt){
-
-    status.textContent="Countdown haijaanza.";
-
-    const startButton=document.createElement("button");
-
-    startButton.textContent="START KICK-OFF";
-
-    startButton.onclick=()=>startKickoff(slip.id,startButton);
-
-    card.append(status,startButton);
+    countdownEntries.push({
+     kickoffTime:new Date(slip.kickoffAt).getTime(),
+     element:countdown
+    });
 
    }else{
 
@@ -826,45 +776,47 @@ async function loadMySlips(){
 
    list.appendChild(card);
 
-   if(
-    slip.kickoffStartedAt&&
-    slip.kickoffAt&&
-    !slip.isLocked
-   ){
+  });
 
-    const kickoffTime=new Date(slip.kickoffAt).getTime();
+  const updateCountdowns=()=>{
 
-    const updateCountdown=()=>{
+   let expired=false;
 
-     const remaining=kickoffTime-serverNow();
+   countdownEntries.forEach(entry=>{
 
-     if(remaining<=0){
+    const remaining=entry.kickoffTime-serverNow();
 
-      countdown.textContent="KICK-OFF IMEFIKA!";
+    if(remaining<=0){
 
-      if(!lockingRequests.has(slip.id)){
+     entry.element.textContent="KICK-OFF IMEFIKA!";
+     expired=true;
 
-       lockingRequests.add(slip.id);
+    }else{
 
-       loadMySlips();
+     entry.element.textContent=formatCountdown(remaining);
 
-      }
+    }
 
-      return;
-     }
+   });
 
-     countdown.textContent=
-      "Starts after "+formatCountdown(remaining);
+   if(expired){
 
-    };
+    if(countdownTimer){
+     clearInterval(countdownTimer);
+     countdownTimer=null;
+    }
 
-    updateCountdown();
-
-    countdownTimer=setInterval(updateCountdown,1000);
+    loadMySlips();
 
    }
 
-  });
+  };
+
+  updateCountdowns();
+
+  if(countdownEntries.length){
+   countdownTimer=setInterval(updateCountdowns,1000);
+  }
 
  }catch(error){
 
