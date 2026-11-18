@@ -8,8 +8,7 @@ const router = Router();
 
 router.use(requireAuth);
 
-// Automatically lock slips whose started countdown has expired.
-// Uses the server's UTC time, not the customer's phone time.
+// LOCK SLIPS WHEN KICK-OFF TIME EXPIRES
 async function lockExpiredSlips() {
   const now = new Date();
 
@@ -61,7 +60,9 @@ router.post("/", async (req, res) => {
   try {
     const data = parsed.data;
 
-    const bookmakers = data.bookingCodes.map(x => x.bookmaker);
+    const bookmakers = data.bookingCodes.map(
+      item => item.bookmaker
+    );
 
     if (new Set(bookmakers).size !== bookmakers.length) {
       return res.status(400).json({
@@ -228,7 +229,7 @@ router.get("/mine", async (req, res) => {
   }
 });
 
-// CUSTOMERS SEE FREE SLIPS ONLY
+// CUSTOMER LIST: FREE SLIPS + LOCKED PREMIUM PREVIEWS
 router.get("/", async (req, res) => {
   try {
     await lockExpiredSlips();
@@ -238,7 +239,9 @@ router.get("/", async (req, res) => {
     };
 
     if (req.user.role === "CUSTOMER") {
-      where.category = "FREE";
+      where.category = {
+        in: ["FREE", "PREMIUM"]
+      };
     }
 
     const slips = await prisma.slip.findMany({
@@ -258,7 +261,36 @@ router.get("/", async (req, res) => {
       }
     });
 
-    return res.json({ slips });
+    // Never expose premium booking codes to customers.
+    const safeSlips = slips.map(slip => {
+      if (
+        req.user.role === "CUSTOMER" &&
+        slip.category === "PREMIUM"
+      ) {
+        return {
+          ...slip,
+          bookingCodes: [],
+          isLocked: true
+        };
+      }
+
+      // Hide booking codes on locked slips.
+      if (
+        req.user.role === "CUSTOMER" &&
+        slip.isLocked
+      ) {
+        return {
+          ...slip,
+          bookingCodes: []
+        };
+      }
+
+      return slip;
+    });
+
+    return res.json({
+      slips: safeSlips
+    });
 
   } catch (error) {
     console.error("Load slips error:", error);
@@ -296,12 +328,26 @@ router.get("/:id", async (req, res) => {
       });
     }
 
+    // Customers cannot access premium booking codes.
     if (
       req.user.role === "CUSTOMER" &&
       slip.category === "PREMIUM"
     ) {
       return res.status(403).json({
         error: "Payment required to view premium booking codes"
+      });
+    }
+
+    // Customers cannot access codes after a slip is locked.
+    if (
+      req.user.role === "CUSTOMER" &&
+      slip.isLocked
+    ) {
+      return res.json({
+        slip: {
+          ...slip,
+          bookingCodes: []
+        }
       });
     }
 
