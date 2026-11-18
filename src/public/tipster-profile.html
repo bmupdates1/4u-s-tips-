@@ -30,6 +30,9 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .status{font-weight:bold;color:#35d39a}
 .lock-status{font-weight:bold;color:#ff7777}
 .small{font-size:13px;color:#bbb}
+.countdown{font-size:27px;font-weight:bold;color:#35d39a;text-align:center;margin:12px 0}
+.countdown-label{text-align:center;color:#bbb;font-size:13px}
+.expired{color:#ff7777}
 </style>
 </head>
 
@@ -50,13 +53,16 @@ button:disabled{opacity:.6;cursor:not-allowed}
 <p class="message">Loading Tipster profile...</p>
 </div>
 
-<!-- FREE BOOKING CODES -->
 <div class="panel">
 <h2 class="free-title">FREE BOOKING CODES</h2>
 <div id="freeBookingCodes">Loading FREE booking codes...</div>
 </div>
 
-<!-- PREMIUM TIPS -->
+<div class="panel">
+<h2 class="premium-title">PREMIUM BOOKING CODES 🔒</h2>
+<div id="premiumBookingCodes">Loading PREMIUM booking codes...</div>
+</div>
+
 <div class="panel">
 <h2 class="premium-title">PREMIUM TIPS 🔒</h2>
 <div id="premiumTips">Loading PREMIUM tips...</div>
@@ -70,22 +76,16 @@ const params=new URLSearchParams(window.location.search);
 const tipsterId=params.get("id");
 
 let token="";
+let countdownTimer=null;
 
 async function request(path){
-
  const response=await fetch(API+path,{
-  headers:{
-   "Authorization":"Bearer "+token
-  }
+  headers:{"Authorization":"Bearer "+token}
  });
 
  let data={};
-
- try{
-  data=await response.json();
- }catch{
-  throw new Error("Server response haijasomeka.");
- }
+ try{data=await response.json()}
+ catch{throw new Error("Server response haijasomeka.")}
 
  if(!response.ok){
   throw new Error(data.error||"Request failed");
@@ -99,27 +99,19 @@ function goBack(){
 }
 
 function showError(message){
-
  document.getElementById("profile").textContent=message;
-
  document.getElementById("freeBookingCodes").textContent=message;
-
+ document.getElementById("premiumBookingCodes").textContent=message;
  document.getElementById("premiumTips").textContent=message;
-
 }
 
-/* PROFILE INFORMATION */
-
 async function loadProfile(){
-
  try{
-
   if(!tipsterId){
    throw new Error("Tipster ID haipo kwenye link.");
   }
 
   const savedToken=sessionStorage.getItem("4u_customer_token");
-
   if(!savedToken){
    throw new Error("Tafadhali login kwanza kupitia Customer Website.");
   }
@@ -127,7 +119,6 @@ async function loadProfile(){
   token=savedToken;
 
   const me=await request("/api/auth/me");
-
   if(me.user.role!=="CUSTOMER"){
    throw new Error("Tumia akaunti ya Customer.");
   }
@@ -137,18 +128,13 @@ async function loadProfile(){
   );
 
   const t=result.tipster;
-
-  if(!t){
-   throw new Error("Tipster profile haijapatikana.");
-  }
+  if(!t)throw new Error("Tipster profile haijapatikana.");
 
   const profile=document.getElementById("profile");
-
   profile.innerHTML="";
 
   const img=document.createElement("img");
   img.className="avatar";
-
   img.src=t.profileImage||
    "https://placehold.co/120x120/063b2b/d4af37?text=4U";
 
@@ -173,195 +159,233 @@ async function loadProfile(){
   follow.textContent=t.isFollowing?"Unfollow":"Follow";
   follow.onclick=()=>changeFollow(t.isFollowing);
 
-  profile.append(
-   img,
-   name,
-   followers,
-   accuracy,
-   record,
-   follow
-  );
+  profile.append(img,name,followers,accuracy,record,follow);
 
-  /* LOAD FREE BOOKING CODES AND PREMIUM TIPS */
-
-  await loadFreeBookingCodes();
+  await loadBookingCodes();
   showPremiumTips(t.tips||[]);
 
  }catch(error){
-
   showError(error.message);
-
  }
-
 }
 
-/* FREE BOOKING CODES */
+/* BOOKING CODES */
 
-async function loadFreeBookingCodes(){
+async function loadBookingCodes(){
+ const freeList=document.getElementById("freeBookingCodes");
+ const premiumList=document.getElementById("premiumBookingCodes");
 
- const list=document.getElementById("freeBookingCodes");
-
- list.textContent="Loading FREE booking codes...";
+ freeList.textContent="Loading...";
+ premiumList.textContent="Loading...";
 
  try{
-
   const result=await request("/api/slips");
 
   const slips=(result.slips||[]).filter(slip=>
-   slip.tipsterId===tipsterId&&
-   slip.category==="FREE"&&
+   slip.tipsterId===tipsterId &&
    slip.isPublished===true
   );
 
-  list.innerHTML="";
+  freeList.innerHTML="";
+  premiumList.innerHTML="";
 
-  if(!slips.length){
+  const freeSlips=slips.filter(s=>s.category==="FREE");
+  const premiumSlips=slips.filter(s=>s.category==="PREMIUM");
 
-   list.textContent="Hakuna FREE booking codes kwa sasa.";
+  if(!freeSlips.length){
+   freeList.textContent="Hakuna FREE booking codes kwa sasa.";
+  }
 
+  if(!premiumSlips.length){
+   premiumList.textContent="Hakuna PREMIUM booking codes kwa sasa.";
+  }
+
+  freeSlips.forEach(slip=>renderSlip(slip,freeList));
+  premiumSlips.forEach(slip=>renderSlip(slip,premiumList));
+
+  startCountdowns();
+
+ }catch(error){
+  freeList.textContent=error.message;
+  premiumList.textContent=error.message;
+ }
+}
+
+/* DISPLAY EACH SLIP */
+
+function renderSlip(slip,list){
+ const card=document.createElement("div");
+ card.className="slip";
+
+ const title=document.createElement("h3");
+ title.textContent=slip.title||"BOOKING SLIP";
+
+ const category=document.createElement("p");
+ category.className="status";
+ category.textContent=slip.category;
+
+ const odds=document.createElement("p");
+ odds.textContent="Total Odds: "+(slip.totalOdds??"Not set");
+
+ const kickoff=document.createElement("p");
+ kickoff.textContent=slip.kickoffAt
+  ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
+  :"Kick-Off: Not set";
+
+ const countdownLabel=document.createElement("p");
+ countdownLabel.className="countdown-label";
+ countdownLabel.textContent="KICK-OFF COUNTDOWN";
+
+ const countdown=document.createElement("div");
+ countdown.className="countdown";
+ countdown.textContent="--:--:--";
+ countdown.dataset.kickoff=slip.kickoffAt||"";
+ countdown.dataset.locked=slip.isLocked?"true":"false";
+
+ card.append(title,category,odds,kickoff,countdownLabel,countdown);
+
+ const codes=Array.isArray(slip.bookingCodes)?slip.bookingCodes:[];
+
+ const codeArea=document.createElement("div");
+ codeArea.className="code-area";
+
+ if(!codes.length){
+  const unavailable=document.createElement("p");
+  unavailable.textContent="Booking codes hazipatikani kwa sasa.";
+  codeArea.appendChild(unavailable);
+ }else{
+  codes.forEach(item=>{
+   const codeBox=document.createElement("div");
+   codeBox.className="code";
+
+   const bookmaker=document.createElement("strong");
+   bookmaker.textContent=
+    item.bookmaker==="SPORTYBET"||
+    item.bookmaker==="SportyBet"
+     ?"SPORTYBET":"BETPAWA";
+
+   const code=document.createElement("p");
+   code.textContent=item.code;
+
+   const copy=document.createElement("button");
+   copy.textContent="COPY "+bookmaker.textContent+" CODE";
+   copy.onclick=()=>copyCode(item.code,copy);
+
+   codeBox.append(bookmaker,code,copy);
+   codeArea.appendChild(codeBox);
+  });
+ }
+
+ card.appendChild(codeArea);
+
+ const status=document.createElement("p");
+ status.className="status";
+ status.textContent=slip.category==="FREE"
+  ?"FREE BOOKING CODES AVAILABLE"
+  :"PREMIUM BOOKING CODES AVAILABLE";
+
+ card.appendChild(status);
+
+ const lockedMessage=document.createElement("p");
+ lockedMessage.className="lock-status";
+ lockedMessage.textContent="🔒 BOOKING CODES LOCKED - KICK-OFF TIME REACHED";
+ lockedMessage.style.display="none";
+
+ card.appendChild(lockedMessage);
+
+ card.dataset.slipCard="true";
+ card.appendChild(codeArea);
+
+ card._codeArea=codeArea;
+ card._status=status;
+ card._lockedMessage=lockedMessage;
+
+ list.appendChild(card);
+}
+
+/* AUTOMATIC COUNTDOWN */
+
+function startCountdowns(){
+ if(countdownTimer)clearInterval(countdownTimer);
+
+ updateCountdowns();
+ countdownTimer=setInterval(updateCountdowns,1000);
+}
+
+function updateCountdowns(){
+ const timers=document.querySelectorAll(".countdown");
+
+ timers.forEach(timer=>{
+  const kickoff=timer.dataset.kickoff;
+  const card=timer.closest(".slip");
+
+  if(!kickoff){
+   timer.textContent="KICK-OFF NOT SET";
+   timer.classList.add("expired");
+   if(card)lockCard(card);
    return;
   }
 
-  slips.forEach(slip=>{
+  const target=new Date(kickoff).getTime();
 
-   const card=document.createElement("div");
-   card.className="slip";
+  if(!Number.isFinite(target)){
+   timer.textContent="INVALID KICK-OFF TIME";
+   timer.classList.add("expired");
+   if(card)lockCard(card);
+   return;
+  }
 
-   const title=document.createElement("h3");
-   title.textContent=slip.title||"FREE BOOKING SLIP";
+  const remaining=target-Date.now();
 
-   const odds=document.createElement("p");
-   odds.textContent="Total Odds: "+(slip.totalOdds??"Not set");
+  if(timer.dataset.locked==="true"||remaining<=0){
+   timer.textContent="00:00:00";
+   timer.classList.add("expired");
+   if(card)lockCard(card);
+   return;
+  }
 
-   const category=document.createElement("p");
-   category.className="status";
-   category.textContent="FREE";
+  const hours=Math.floor(remaining/3600000);
+  const minutes=Math.floor((remaining%3600000)/60000);
+  const seconds=Math.floor((remaining%60000)/1000);
 
-   const kickoff=document.createElement("p");
-
-   kickoff.textContent=slip.kickoffAt
-    ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
-    :"Kick-Off: Not set";
-
-   card.append(title,category,odds,kickoff);
-
-   if(slip.isLocked){
-
-    const locked=document.createElement("p");
-    locked.className="lock-status";
-    locked.textContent="🔒 BOOKING CODES LOCKED - KICK-OFF TIME REACHED";
-
-    card.appendChild(locked);
-
-   }else{
-
-    const codes=slip.bookingCodes||[];
-
-    if(!codes.length){
-
-     const unavailable=document.createElement("p");
-     unavailable.textContent="Booking codes hazipatikani kwa sasa.";
-
-     card.appendChild(unavailable);
-
-    }else{
-
-     codes.forEach(item=>{
-
-      const codeBox=document.createElement("div");
-      codeBox.className="code";
-
-      const bookmaker=document.createElement("strong");
-
-      bookmaker.textContent=
-       item.bookmaker==="SPORTYBET"||
-       item.bookmaker==="SportyBet"
-        ?"SPORTYBET"
-        :"BETPAWA";
-
-      const code=document.createElement("p");
-      code.textContent=item.code;
-
-      const copy=document.createElement("button");
-      copy.textContent="COPY "+bookmaker.textContent+" CODE";
-
-      copy.onclick=()=>copyCode(item.code,copy);
-
-      codeBox.append(bookmaker,code,copy);
-
-      card.appendChild(codeBox);
-
-     });
-
-     const available=document.createElement("p");
-     available.className="status";
-     available.textContent="FREE BOOKING CODES AVAILABLE";
-
-     card.appendChild(available);
-
-    }
-
-   }
-
-   if(slip.kickoffStartedAt&&!slip.isLocked){
-
-    const note=document.createElement("p");
-    note.className="small";
-    note.textContent="Kick-Off countdown started.";
-
-    card.appendChild(note);
-
-   }
-
-   list.appendChild(card);
-
-  });
-
- }catch(error){
-
-  list.textContent=error.message;
-
- }
-
+  timer.textContent=
+   String(hours).padStart(2,"0")+":"+
+   String(minutes).padStart(2,"0")+":"+
+   String(seconds).padStart(2,"0");
+ });
 }
 
-/* COPY BOOKING CODE */
+function lockCard(card){
+ const area=card._codeArea;
+ const status=card._status;
+ const message=card._lockedMessage;
+
+ if(area)area.style.display="none";
+ if(status)status.style.display="none";
+ if(message)message.style.display="block";
+}
+
+/* COPY CODE */
 
 async function copyCode(code,button){
-
  try{
-
   await navigator.clipboard.writeText(code);
-
   button.textContent="COPIED!";
-
-  setTimeout(()=>{
-   button.textContent="COPY CODE";
-  },2000);
-
+  setTimeout(()=>button.textContent="COPY CODE",2000);
  }catch(error){
-
   const input=document.createElement("textarea");
-
   input.value=code;
   document.body.appendChild(input);
-
   input.select();
-
   const copied=document.execCommand("copy");
-
   document.body.removeChild(input);
-
   button.textContent=copied?"COPIED!":"COPY FAILED";
-
  }
-
 }
 
 /* PREMIUM TIPS */
 
 function showPremiumTips(tips){
-
  const list=document.getElementById("premiumTips");
 
  const premiumTips=tips.filter(
@@ -371,14 +395,11 @@ function showPremiumTips(tips){
  list.innerHTML="";
 
  if(!premiumTips.length){
-
   list.textContent="Hakuna PREMIUM tips kwa sasa.";
-
   return;
  }
 
  premiumTips.forEach(tip=>{
-
   const card=document.createElement("div");
   card.className="slip locked";
 
@@ -402,61 +423,37 @@ function showPremiumTips(tips){
   button.textContent="PREMIUM ACCESS COMING SOON";
   button.disabled=true;
 
-  card.append(
-   label,
-   match,
-   info,
-   hidden,
-   odds,
-   button
-  );
-
+  card.append(label,match,info,hidden,odds,button);
   list.appendChild(card);
-
  });
-
 }
 
-/* FOLLOW AND UNFOLLOW */
+/* FOLLOW / UNFOLLOW */
 
 async function changeFollow(isFollowing){
-
  try{
-
   const response=await fetch(
    API+"/api/follows/"+encodeURIComponent(tipsterId),
    {
     method:isFollowing?"DELETE":"POST",
-    headers:{
-     "Authorization":"Bearer "+token
-    }
+    headers:{"Authorization":"Bearer "+token}
    }
   );
 
   let data={};
-
-  try{
-   data=await response.json();
-  }catch{}
+  try{data=await response.json()}catch{}
 
   if(!response.ok){
    throw new Error(data.error||"Follow action failed");
   }
 
   await loadProfile();
-
  }catch(error){
-
   alert(error.message);
-
  }
-
 }
 
-/* START */
-
 loadProfile();
-
 </script>
 
 </body>
