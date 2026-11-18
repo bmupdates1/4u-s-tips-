@@ -1,18 +1,20 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sw">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>4U'S TIPS - Tipster Dashboard</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#071b15;color:white}
 header{background:#063b2b;border-bottom:2px solid #d4af37;padding:20px;text-align:center}
-h1,h2{color:#d4af37}
+h1,h2,h3{color:#d4af37}
 main{max-width:700px;margin:auto;padding:18px}
 .panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
 input,select,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
+input,select{background:#071b15;color:white;border:1px solid #315644}
 button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
 .secondary{background:#063b2b;color:white;border:1px solid #d4af37}
@@ -23,13 +25,18 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .locked{color:#ff6969;font-weight:bold}
 .started{color:#72e6a1}
 label{display:block;margin-top:12px}
+.free-title{color:#35d39a}
+.premium-title{color:#d4af37}
 </style>
 </head>
+
 <body>
+
 <header>
-<h1>4U'S TIPS</h1>
+<h1>4U'S TIPS ⚽</h1>
 <p>TIPSTER DASHBOARD</p>
 </header>
+
 <main>
 
 <section id="loginSection">
@@ -43,12 +50,53 @@ label{display:block;margin-top:12px}
 </section>
 
 <section id="dashboard" class="hidden">
+
 <div class="panel">
 <h2 id="welcome">Welcome Tipster</h2>
+<button class="secondary" onclick="loadMyTips()">REFRESH MY TIPS</button>
 <button class="secondary" onclick="loadMySlips()">REFRESH MY SLIPS</button>
 <button onclick="logout()">LOGOUT</button>
 <p id="dashboardMessage" class="message"></p>
 </div>
+
+<!-- PUBLISH MATCH TIPS -->
+
+<div class="panel">
+<h2>PUBLISH NEW MATCH TIP</h2>
+
+<p class="message">
+Chapisha prediction yako. FREE itaonekana wazi kwa Customers.
+PREMIUM itaonekana LOCKED kwa Customers.
+</p>
+
+<label>Match Name</label>
+<input id="tipMatchName" placeholder="Mfano: Arsenal vs Chelsea" maxlength="200">
+
+<label>Prediction</label>
+<input id="tipPrediction" placeholder="Mfano: Arsenal Win" maxlength="200">
+
+<label>Odds</label>
+<input id="tipOdds" type="number" step="0.01" min="0.01" max="10000" placeholder="Mfano: 1.85">
+
+<label>Category</label>
+<select id="tipCategory">
+<option value="FREE">FREE</option>
+<option value="PREMIUM">PREMIUM</option>
+</select>
+
+<label>Kick-Off Date and Time (optional)</label>
+<input id="tipKickoffAt" type="datetime-local">
+
+<button onclick="publishTip()">PUBLISH MATCH TIP</button>
+<p id="tipPublishMessage" class="message"></p>
+</div>
+
+<div class="panel">
+<h2>MY PUBLISHED MATCH TIPS</h2>
+<div id="myTips">Login kwanza...</div>
+</div>
+
+<!-- PUBLISH BOOKING SLIPS -->
 
 <div class="panel">
 <h2>PUBLISH NEW BOOKING SLIP</h2>
@@ -69,7 +117,8 @@ label{display:block;margin-top:12px}
 <option value="PREMIUM">PREMIUM</option>
 </select>
 
-<input id="price" type="number" min="0" step="0.01" placeholder="Price (0 for FREE)">
+<label>Price (0 for FREE)</label>
+<input id="price" type="number" min="0" step="0.01" placeholder="Price">
 
 <label>Kick-Off Date and Time</label>
 <input id="kickoffAt" type="datetime-local">
@@ -77,7 +126,9 @@ label{display:block;margin-top:12px}
 <label>Slip Validity (optional)</label>
 <input id="validityUntil" type="datetime-local">
 
-<p class="message">Weka muda wa kuanza kwa mkeka. Countdown itaanza baada ya kubonyeza START KICK-OFF.</p>
+<p class="message">
+Weka muda wa kuanza kwa mkeka. Countdown itaanza baada ya kubonyeza START KICK-OFF.
+</p>
 
 <button onclick="publishSlip()">PUBLISH BOOKING SLIP</button>
 <p id="publishMessage" class="message"></p>
@@ -87,17 +138,22 @@ label{display:block;margin-top:12px}
 <h2>MY PUBLISHED SLIPS</h2>
 <div id="mySlips">Loading...</div>
 </div>
+
 </section>
 </main>
 
 <script>
+
 const API=window.location.origin;
+
 let token="";
+let currentUserId="";
 let serverOffset=0;
 let countdownTimer=null;
 let lockingRequests=new Set();
 
 async function request(path,options={}){
+
  const response=await fetch(API+path,{
   ...options,
   headers:{
@@ -106,14 +162,26 @@ async function request(path,options={}){
   }
  });
 
- // Synchronize countdown with the server's UTC clock.
  const serverDate=response.headers.get("Date");
+
  if(serverDate){
   serverOffset=new Date(serverDate).getTime()-Date.now();
  }
 
- const data=await response.json();
- if(!response.ok)throw new Error(data.error||"Request failed");
+ const text=await response.text();
+
+ let data={};
+
+ try{
+  data=JSON.parse(text);
+ }catch{
+  throw new Error("Server response: "+text.slice(0,200));
+ }
+
+ if(!response.ok){
+  throw new Error(data.error||"Request failed");
+ }
+
  return data;
 }
 
@@ -121,9 +189,14 @@ function serverNow(){
  return Date.now()+serverOffset;
 }
 
+/* LOGIN */
+
 async function login(){
+
  const message=document.getElementById("loginMessage");
+
  try{
+
   const result=await request("/api/auth/login",{
    method:"POST",
    body:JSON.stringify({
@@ -133,6 +206,7 @@ async function login(){
   });
 
   token=result.token;
+
   const me=await request("/api/auth/me");
 
   if(!["TIPSTER","SUPER_ADMIN"].includes(me.user.role)){
@@ -140,42 +214,233 @@ async function login(){
    throw new Error("Akaunti hii si ya Tipster.");
   }
 
+  currentUserId=me.user.id;
+
   document.getElementById("loginSection").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
-  document.getElementById("welcome").textContent="Welcome, "+me.user.username;
 
+  document.getElementById("welcome").textContent=
+   "Welcome, "+me.user.username;
+
+  await loadMyTips();
   await loadMySlips();
 
  }catch(error){
+
   token="";
+  currentUserId="";
   message.textContent=error.message;
+
  }
+
 }
 
+/* PUBLISH MATCH TIP */
+
+async function publishTip(){
+
+ const message=document.getElementById("tipPublishMessage");
+
+ try{
+
+  const matchName=document.getElementById("tipMatchName").value.trim();
+  const prediction=document.getElementById("tipPrediction").value.trim();
+  const oddsValue=document.getElementById("tipOdds").value;
+  const category=document.getElementById("tipCategory").value;
+  const kickoff=document.getElementById("tipKickoffAt").value;
+
+  if(matchName.length<3){
+   throw new Error("Weka majina ya timu au mchezo.");
+  }
+
+  if(!prediction){
+   throw new Error("Weka prediction.");
+  }
+
+  if(oddsValue && (
+   Number(oddsValue)<=0 ||
+   Number(oddsValue)>10000
+  )){
+   throw new Error("Odds lazima iwe zaidi ya 0 na isizidi 10000.");
+  }
+
+  const payload={
+   matchName,
+   prediction,
+   category
+  };
+
+  if(oddsValue){
+   payload.odds=Number(oddsValue);
+  }
+
+  if(kickoff){
+
+   const kickoffDate=new Date(kickoff);
+
+   if(isNaN(kickoffDate.getTime())){
+    throw new Error("Tarehe ya Kick-Off si sahihi.");
+   }
+
+   payload.kickoffAt=kickoffDate.toISOString();
+  }
+
+  await request("/api/tips",{
+   method:"POST",
+   body:JSON.stringify(payload)
+  });
+
+  message.textContent="Match Tip imechapishwa kikamilifu!";
+
+  [
+   "tipMatchName",
+   "tipPrediction",
+   "tipOdds",
+   "tipKickoffAt"
+  ].forEach(id=>{
+   document.getElementById(id).value="";
+  });
+
+  await loadMyTips();
+
+ }catch(error){
+
+  message.textContent=error.message;
+
+ }
+
+}
+
+/* LOAD MY MATCH TIPS */
+
+async function loadMyTips(){
+
+ const list=document.getElementById("myTips");
+
+ if(!list)return;
+
+ list.textContent="Loading...";
+
+ try{
+
+  const result=await request("/api/tips");
+
+  const tips=(result.tips||[]).filter(
+   tip=>tip.tipsterId===currentUserId
+  );
+
+  list.innerHTML="";
+
+  if(!tips.length){
+
+   list.textContent="Bado hujachapisha Match Tip.";
+
+   return;
+  }
+
+  tips.forEach(tip=>{
+
+   const card=document.createElement("div");
+   card.className="tip";
+
+   const match=document.createElement("h3");
+   match.textContent=tip.matchName;
+
+   const prediction=document.createElement("p");
+   prediction.textContent="Prediction: "+tip.prediction;
+
+   const odds=document.createElement("p");
+   odds.textContent="Odds: "+(tip.odds??"Not set");
+
+   const category=document.createElement("p");
+   category.textContent="Category: "+tip.category;
+
+   const result=document.createElement("p");
+   result.textContent="Result: "+tip.result;
+
+   const kickoff=document.createElement("p");
+   kickoff.textContent=tip.kickoffAt
+    ?"Kick-Off: "+new Date(tip.kickoffAt).toLocaleString()
+    :"Kick-Off: Not set";
+
+   card.append(
+    match,
+    prediction,
+    odds,
+    category,
+    result,
+    kickoff
+   );
+
+   list.appendChild(card);
+
+  });
+
+ }catch(error){
+
+  list.textContent=error.message;
+
+ }
+
+}
+
+/* PUBLISH BOOKING SLIP */
+
 async function publishSlip(){
+
  const message=document.getElementById("publishMessage");
 
  try{
+
   const category=document.getElementById("category").value;
   const price=Number(document.getElementById("price").value||0);
+
   const bookingCodes=[];
 
   const sporty=document.getElementById("sportyCode").value.trim();
   const betpawa=document.getElementById("betpawaCode").value.trim();
 
-  if(sporty)bookingCodes.push({bookmaker:"SportyBet",code:sporty});
-  if(betpawa)bookingCodes.push({bookmaker:"BetPawa",code:betpawa});
+  if(sporty){
+   bookingCodes.push({
+    bookmaker:"SportyBet",
+    code:sporty
+   });
+  }
 
-  if(!bookingCodes.length)throw new Error("Weka angalau Booking Code moja.");
-  if(category==="FREE"&&price!==0)throw new Error("FREE slip lazima iwe na bei 0.");
-  if(category==="PREMIUM"&&price<=0)throw new Error("PREMIUM slip lazima iwe na bei zaidi ya 0.");
+  if(betpawa){
+   bookingCodes.push({
+    bookmaker:"BetPawa",
+    code:betpawa
+   });
+  }
+
+  if(!bookingCodes.length){
+   throw new Error("Weka angalau Booking Code moja.");
+  }
+
+  if(category==="FREE"&&price!==0){
+   throw new Error("FREE slip lazima iwe na bei 0.");
+  }
+
+  if(category==="PREMIUM"&&price<=0){
+   throw new Error("PREMIUM slip lazima iwe na bei zaidi ya 0.");
+  }
 
   const kickoff=document.getElementById("kickoffAt").value;
-  if(!kickoff)throw new Error("Weka tarehe na muda wa Kick-Off.");
+
+  if(!kickoff){
+   throw new Error("Weka tarehe na muda wa Kick-Off.");
+  }
 
   const kickoffDate=new Date(kickoff);
-  if(isNaN(kickoffDate.getTime()))throw new Error("Tarehe ya Kick-Off si sahihi.");
-  if(kickoffDate.getTime()<=serverNow())throw new Error("Kick-Off lazima iwe muda wa baadaye.");
+
+  if(isNaN(kickoffDate.getTime())){
+   throw new Error("Tarehe ya Kick-Off si sahihi.");
+  }
+
+  if(kickoffDate.getTime()<=serverNow()){
+   throw new Error("Kick-Off lazima iwe muda wa baadaye.");
+  }
 
   const validity=document.getElementById("validityUntil").value;
 
@@ -188,25 +453,42 @@ async function publishSlip(){
     price,
     category,
     kickoffAt:kickoffDate.toISOString(),
-    validityUntil:validity?new Date(validity).toISOString():undefined,
+    validityUntil:validity
+     ?new Date(validity).toISOString()
+     :undefined,
     bookingCodes
    })
   });
 
   message.textContent="Booking Slip imechapishwa kikamilifu!";
 
-  ["title","riskLabel","totalOdds","sportyCode","betpawaCode","price","kickoffAt","validityUntil"].forEach(id=>{
+  [
+   "title",
+   "riskLabel",
+   "totalOdds",
+   "sportyCode",
+   "betpawaCode",
+   "price",
+   "kickoffAt",
+   "validityUntil"
+  ].forEach(id=>{
    document.getElementById(id).value="";
   });
 
   await loadMySlips();
 
  }catch(error){
+
   message.textContent=error.message;
+
  }
+
 }
 
+/* START KICK-OFF */
+
 async function startKickoff(id,button){
+
  if(!confirm("Una uhakika kuanzisha countdown ya mkeka huu? Huwezi kuanzisha tena baada ya kuanza.")){
   return;
  }
@@ -214,26 +496,39 @@ async function startKickoff(id,button){
  button.disabled=true;
 
  try{
-  const result=await request("/api/slips/"+encodeURIComponent(id)+"/start-kickoff",{
-   method:"PATCH",
-   body:JSON.stringify({})
-  });
+
+  const result=await request(
+   "/api/slips/"+encodeURIComponent(id)+"/start-kickoff",
+   {
+    method:"PATCH",
+    body:JSON.stringify({})
+   }
+  );
 
   if(result.serverTime){
    serverOffset=new Date(result.serverTime).getTime()-Date.now();
   }
 
-  document.getElementById("dashboardMessage").textContent="START KICK-OFF imefanikiwa!";
+  document.getElementById("dashboardMessage").textContent=
+   "START KICK-OFF imefanikiwa!";
+
   await loadMySlips();
 
  }catch(error){
+
   button.disabled=false;
-  document.getElementById("dashboardMessage").textContent=error.message;
+
+  document.getElementById("dashboardMessage").textContent=
+   error.message;
+
  }
+
 }
 
 function formatCountdown(milliseconds){
+
  const seconds=Math.max(0,Math.floor(milliseconds/1000));
+
  const hours=Math.floor(seconds/3600);
  const minutes=Math.floor((seconds%3600)/60);
  const remaining=seconds%60;
@@ -241,10 +536,15 @@ function formatCountdown(milliseconds){
  return String(hours).padStart(2,"0")+":"+
         String(minutes).padStart(2,"0")+":"+
         String(remaining).padStart(2,"0");
+
 }
 
+/* LOAD MY BOOKING SLIPS */
+
 async function loadMySlips(){
+
  const list=document.getElementById("mySlips");
+
  list.textContent="Loading...";
 
  if(countdownTimer){
@@ -253,18 +553,23 @@ async function loadMySlips(){
  }
 
  try{
+
   const result=await request("/api/slips/mine");
+
   const slips=result.slips||[];
 
   list.innerHTML="";
   lockingRequests.clear();
 
   if(!slips.length){
+
    list.textContent="Bado hujachapisha Booking Slip.";
+
    return;
   }
 
   slips.forEach(slip=>{
+
    const card=document.createElement("div");
    card.className="tip";
 
@@ -278,74 +583,114 @@ async function loadMySlips(){
    category.textContent="Category: "+slip.category;
 
    const codes=document.createElement("p");
+
    codes.textContent=(slip.bookingCodes||[])
-    .map(x=>x.bookmaker+": "+x.code).join(" | ");
+    .map(x=>x.bookmaker+": "+x.code)
+    .join(" | ");
 
    const kickoff=document.createElement("p");
+
    kickoff.textContent=slip.kickoffAt
     ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
     :"Kick-Off: Not set";
 
    const status=document.createElement("p");
+
    const countdown=document.createElement("div");
    countdown.className="countdown";
 
    card.append(title,odds,category,codes,kickoff);
 
    if(slip.isLocked){
+
     status.className="locked";
     status.textContent="LOCKED - KICK-OFF TIME REACHED";
+
     card.append(status);
 
-   }else if(slip.kickoffStartedAt && slip.kickoffAt){
+   }else if(slip.kickoffStartedAt&&slip.kickoffAt){
+
     status.className="started";
     status.textContent="KICK-OFF COUNTDOWN STARTED";
+
     card.append(status,countdown);
 
    }else if(slip.kickoffAt){
+
     status.textContent="Countdown haijaanza.";
+
     const startButton=document.createElement("button");
+
     startButton.textContent="START KICK-OFF";
+
     startButton.onclick=()=>startKickoff(slip.id,startButton);
+
     card.append(status,startButton);
 
    }else{
+
     status.textContent="Hakuna muda wa Kick-Off uliowekwa.";
+
     card.append(status);
+
    }
 
    list.appendChild(card);
 
-   if(slip.kickoffStartedAt && slip.kickoffAt && !slip.isLocked){
+   if(
+    slip.kickoffStartedAt&&
+    slip.kickoffAt&&
+    !slip.isLocked
+   ){
+
     const kickoffTime=new Date(slip.kickoffAt).getTime();
 
     const updateCountdown=()=>{
+
      const remaining=kickoffTime-serverNow();
 
      if(remaining<=0){
+
       countdown.textContent="KICK-OFF IMEFIKA!";
+
       if(!lockingRequests.has(slip.id)){
+
        lockingRequests.add(slip.id);
+
        loadMySlips();
+
       }
+
       return;
      }
 
-     countdown.textContent="Starts after "+formatCountdown(remaining);
+     countdown.textContent=
+      "Starts after "+formatCountdown(remaining);
+
     };
 
     updateCountdown();
+
     countdownTimer=setInterval(updateCountdown,1000);
+
    }
+
   });
 
  }catch(error){
+
   list.textContent=error.message;
+
  }
+
 }
 
+/* LOGOUT */
+
 function logout(){
+
  token="";
+ currentUserId="";
 
  if(countdownTimer){
   clearInterval(countdownTimer);
@@ -354,9 +699,16 @@ function logout(){
 
  document.getElementById("dashboard").classList.add("hidden");
  document.getElementById("loginSection").classList.remove("hidden");
+
  document.getElementById("password").value="";
  document.getElementById("loginMessage").textContent="";
+
+ document.getElementById("tipPublishMessage").textContent="";
+ document.getElementById("publishMessage").textContent="";
+
 }
+
 </script>
+
 </body>
 </html>
