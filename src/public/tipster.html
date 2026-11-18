@@ -27,6 +27,16 @@ button:disabled{opacity:.5;cursor:not-allowed}
 label{display:block;margin-top:12px}
 .free-title{color:#35d39a}
 .premium-title{color:#d4af37}
+.profile-preview{
+ display:block;
+ width:120px;
+ height:120px;
+ object-fit:cover;
+ border-radius:50%;
+ border:2px solid #d4af37;
+ margin:12px auto;
+ background:#071b15;
+}
 </style>
 </head>
 
@@ -57,6 +67,39 @@ label{display:block;margin-top:12px}
 <button class="secondary" onclick="loadMySlips()">REFRESH MY SLIPS</button>
 <button onclick="logout()">LOGOUT</button>
 <p id="dashboardMessage" class="message"></p>
+</div>
+
+<!-- MY PROFILE PICTURE -->
+
+<div class="panel">
+<h2>MY PROFILE PICTURE</h2>
+
+<p class="message">
+Chagua picha kutoka Gallery ya simu yako.
+Picha itaonekana kwenye Home Page na Profile yako.
+</p>
+
+<img
+id="profilePicturePreview"
+class="profile-preview"
+alt="Profile picture preview"
+src="https://placehold.co/120x120/063b2b/d4af37?text=4U"
+>
+
+<label>Chagua picha kutoka Gallery</label>
+
+<input
+id="profilePictureFile"
+type="file"
+accept="image/jpeg,image/png,image/webp"
+onchange="previewProfilePicture()"
+>
+
+<button onclick="uploadProfilePicture()">
+SAVE PROFILE PICTURE
+</button>
+
+<p id="profilePictureMessage" class="message"></p>
 </div>
 
 <!-- PUBLISH MATCH TIPS -->
@@ -222,6 +265,7 @@ async function login(){
   document.getElementById("welcome").textContent=
    "Welcome, "+me.user.username;
 
+  await loadProfilePicture();
   await loadMyTips();
   await loadMySlips();
 
@@ -229,6 +273,151 @@ async function login(){
 
   token="";
   currentUserId="";
+  message.textContent=error.message;
+
+ }
+
+}
+
+/* PROFILE PICTURE */
+
+async function loadProfilePicture(){
+
+ try{
+
+  const result=await request(
+   "/api/tipsters/"+encodeURIComponent(currentUserId)
+  );
+
+  document.getElementById("profilePicturePreview").src=
+   result.tipster?.profileImage||
+   "https://placehold.co/120x120/063b2b/d4af37?text=4U";
+
+ }catch(error){
+
+  document.getElementById("profilePictureMessage").textContent=
+   error.message;
+
+ }
+
+}
+
+function previewProfilePicture(){
+
+ const file=document.getElementById("profilePictureFile").files[0];
+ const message=document.getElementById("profilePictureMessage");
+
+ if(!file)return;
+
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)){
+  message.textContent="Tumia picha ya JPG, PNG au WEBP.";
+  return;
+ }
+
+ const reader=new FileReader();
+
+ reader.onload=()=>{
+  document.getElementById("profilePicturePreview").src=reader.result;
+  message.textContent="Preview ya picha. Bonyeza SAVE PROFILE PICTURE.";
+ };
+
+ reader.onerror=()=>{
+  message.textContent="Imeshindikana kusoma picha.";
+ };
+
+ reader.readAsDataURL(file);
+
+}
+
+async function uploadProfilePicture(){
+
+ const file=document.getElementById("profilePictureFile").files[0];
+ const message=document.getElementById("profilePictureMessage");
+
+ if(!file){
+  message.textContent="Chagua picha kutoka Gallery kwanza.";
+  return;
+ }
+
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)){
+  message.textContent="Tumia picha ya JPG, PNG au WEBP.";
+  return;
+ }
+
+ message.textContent="Inahifadhi picha...";
+
+ try{
+
+  const dataUrl=await new Promise((resolve,reject)=>{
+
+   const reader=new FileReader();
+
+   reader.onload=()=>resolve(reader.result);
+   reader.onerror=()=>reject(new Error("Imeshindikana kusoma picha."));
+
+   reader.readAsDataURL(file);
+
+  });
+
+  const image=await new Promise((resolve,reject)=>{
+
+   const img=new Image();
+
+   img.onload=()=>resolve(img);
+   img.onerror=()=>reject(new Error("Picha haikuweza kufunguliwa."));
+
+   img.src=dataUrl;
+
+  });
+
+  const maxSide=600;
+
+  const scale=Math.min(
+   1,
+   maxSide/Math.max(image.width,image.height)
+  );
+
+  const canvas=document.createElement("canvas");
+
+  canvas.width=Math.max(1,Math.round(image.width*scale));
+  canvas.height=Math.max(1,Math.round(image.height*scale));
+
+  const context=canvas.getContext("2d");
+
+  context.drawImage(
+   image,
+   0,
+   0,
+   canvas.width,
+   canvas.height
+  );
+
+  const compressed=canvas.toDataURL("image/jpeg",0.78);
+
+  if(compressed.length>1400000){
+   throw new Error("Picha ni kubwa sana. Chagua picha nyingine.");
+  }
+
+  const result=await request(
+   "/api/tipsters/me/profile-image",
+   {
+    method:"PATCH",
+    body:JSON.stringify({
+     profileImage:compressed
+    })
+   }
+  );
+
+  document.getElementById("profilePicturePreview").src=
+   result.profileImage;
+
+  document.getElementById("profilePictureFile").value="";
+
+  message.textContent=
+   result.message||"Profile picture imehifadhiwa.";
+
+ }catch(error){
+
   message.textContent=error.message;
 
  }
@@ -705,6 +894,9 @@ function logout(){
 
  document.getElementById("tipPublishMessage").textContent="";
  document.getElementById("publishMessage").textContent="";
+ document.getElementById("profilePictureMessage").textContent="";
+
+ document.getElementById("profilePictureFile").value="";
 
 }
 
