@@ -8,7 +8,7 @@ const router = Router();
 
 router.use(requireAuth);
 
-// AUTOMATICALLY LOCK SLIPS WHEN KICK-OFF TIME ARRIVES
+// AUTOMATICALLY ARCHIVE SLIPS WHEN KICK-OFF TIME ARRIVES
 async function lockExpiredSlips() {
   const now = new Date();
 
@@ -20,7 +20,8 @@ async function lockExpiredSlips() {
       }
     },
     data: {
-      isLocked: true
+      isLocked: true,
+      isPublished: false
     }
   });
 }
@@ -31,10 +32,7 @@ const slipSchema = z.object({
   totalOdds: z.coerce.number().positive(),
   price: z.coerce.number().min(0).default(0),
   validityUntil: z.coerce.date().optional(),
-
-  // KICK-OFF TIME IS REQUIRED
   kickoffAt: z.coerce.date(),
-
   category: z.enum(["FREE", "PREMIUM"]),
   bookingCodes: z.array(
     z.object({
@@ -63,7 +61,6 @@ router.post("/", async (req, res) => {
 
   try {
     const data = parsed.data;
-
     const now = new Date();
 
     if (data.kickoffAt <= now) {
@@ -123,7 +120,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// OLD START-KICKOFF ENDPOINT KEPT FOR DASHBOARD COMPATIBILITY
+// START KICK-OFF ENDPOINT KEPT FOR COMPATIBILITY
 router.patch("/:id/start-kickoff", async (req, res) => {
   try {
     const slip = await prisma.slip.findUnique({
@@ -176,7 +173,9 @@ router.patch("/:id/start-kickoff", async (req, res) => {
         tipsterId: req.user.id,
         kickoffStartedAt: null,
         isLocked: false,
-        kickoffAt: { gt: now }
+        kickoffAt: {
+          gt: now
+        }
       },
       data: {
         kickoffStartedAt: now
@@ -213,7 +212,7 @@ router.patch("/:id/start-kickoff", async (req, res) => {
   }
 });
 
-// TIPSTER VIEWS THEIR OWN SLIPS
+// TIPSTER HISTORY AND ACTIVE SLIPS
 router.get("/mine", async (req, res) => {
   try {
     await lockExpiredSlips();
@@ -241,20 +240,15 @@ router.get("/mine", async (req, res) => {
   }
 });
 
-// CUSTOMER LIST: FREE SLIPS + LOCKED PREMIUM PREVIEWS
+// CUSTOMER LIST: ONLY ACTIVE PUBLISHED SLIPS
 router.get("/", async (req, res) => {
   try {
     await lockExpiredSlips();
 
     const where = {
-      isPublished: true
+      isPublished: true,
+      isLocked: false
     };
-
-    if (req.user.role === "CUSTOMER") {
-      where.category = {
-        in: ["FREE", "PREMIUM"]
-      };
-    }
 
     const slips = await prisma.slip.findMany({
       where,
@@ -283,17 +277,6 @@ router.get("/", async (req, res) => {
           ...slip,
           bookingCodes: [],
           isLocked: true
-        };
-      }
-
-      // HIDE CODES AFTER KICK-OFF
-      if (
-        req.user.role === "CUSTOMER" &&
-        slip.isLocked
-      ) {
-        return {
-          ...slip,
-          bookingCodes: []
         };
       }
 
@@ -334,7 +317,7 @@ router.get("/:id", async (req, res) => {
       }
     });
 
-    if (!slip || !slip.isPublished) {
+    if (!slip || !slip.isPublished || slip.isLocked) {
       return res.status(404).json({
         error: "Betslip not found"
       });
@@ -347,19 +330,6 @@ router.get("/:id", async (req, res) => {
     ) {
       return res.status(403).json({
         error: "Payment required to view premium booking codes"
-      });
-    }
-
-    // CUSTOMERS CANNOT ACCESS LOCKED CODES
-    if (
-      req.user.role === "CUSTOMER" &&
-      slip.isLocked
-    ) {
-      return res.json({
-        slip: {
-          ...slip,
-          bookingCodes: []
-        }
       });
     }
 
