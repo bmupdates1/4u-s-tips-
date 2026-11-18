@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="sw">
 <head>
@@ -37,6 +36,9 @@ label{display:block;margin-top:12px}
  margin:12px auto;
  background:#071b15;
 }
+.history-heading{color:#ff9696}
+.active-heading{color:#72e6a1}
+.empty-message{color:#aaa;text-align:center;padding:12px}
 </style>
 </head>
 
@@ -69,11 +71,8 @@ label{display:block;margin-top:12px}
 <p id="dashboardMessage" class="message"></p>
 </div>
 
-<!-- MY PROFILE PICTURE -->
-
 <div class="panel">
 <h2>MY PROFILE PICTURE</h2>
-
 <p class="message">
 Chagua picha kutoka Gallery ya simu yako.
 Picha itaonekana kwenye Home Page na Profile yako.
@@ -95,18 +94,12 @@ accept="image/jpeg,image/png,image/webp"
 onchange="previewProfilePicture()"
 >
 
-<button onclick="uploadProfilePicture()">
-SAVE PROFILE PICTURE
-</button>
-
+<button onclick="uploadProfilePicture()">SAVE PROFILE PICTURE</button>
 <p id="profilePictureMessage" class="message"></p>
 </div>
 
-<!-- PUBLISH MATCH TIPS -->
-
 <div class="panel">
 <h2>PUBLISH NEW MATCH TIP</h2>
-
 <p class="message">
 Chapisha prediction yako. FREE itaonekana wazi kwa Customers.
 PREMIUM itaonekana LOCKED kwa Customers.
@@ -138,8 +131,6 @@ PREMIUM itaonekana LOCKED kwa Customers.
 <h2>MY PUBLISHED MATCH TIPS</h2>
 <div id="myTips">Login kwanza...</div>
 </div>
-
-<!-- PUBLISH BOOKING SLIPS -->
 
 <div class="panel">
 <h2>PUBLISH NEW BOOKING SLIP</h2>
@@ -177,9 +168,24 @@ Weka muda wa Kick-Off. Countdown itaanza moja kwa moja baada ya kuchapisha Booki
 <p id="publishMessage" class="message"></p>
 </div>
 
+<!-- ACTIVE BOOKING SLIPS -->
+
 <div class="panel">
-<h2>MY PUBLISHED SLIPS</h2>
-<div id="mySlips">Loading...</div>
+<h2 class="active-heading">ACTIVE BOOKING SLIPS</h2>
+<p class="message">Booking Slips ambazo muda wa Kick-Off bado haujafika.</p>
+<div id="myActiveSlips">
+Login kwanza...
+</div>
+</div>
+
+<!-- BOOKING SLIP HISTORY -->
+
+<div class="panel">
+<h2 class="history-heading">BOOKING SLIP HISTORY</h2>
+<p class="message">Slips zilizofikia muda wa Kick-Off zitahifadhiwa hapa pamoja na booking codes zake.</p>
+<div id="mySlipHistory">
+History itaonekana hapa...
+</div>
 </div>
 
 </section>
@@ -687,13 +693,90 @@ function formatCountdown(milliseconds){
 
 }
 
-/* LOAD MY BOOKING SLIPS - AUTOMATIC COUNTDOWN */
+/* CREATE BOOKING SLIP CARD */
+
+function createSlipCard(slip,isHistory){
+
+ const card=document.createElement("div");
+ card.className="tip";
+
+ const title=document.createElement("h3");
+ title.textContent=slip.title||"Untitled Slip";
+
+ const odds=document.createElement("p");
+ odds.textContent="Total Odds: "+(slip.totalOdds??"Not set");
+
+ const category=document.createElement("p");
+ category.textContent="Category: "+(slip.category||"Not set");
+
+ const price=document.createElement("p");
+ price.textContent="Price: "+(slip.price??0);
+
+ const risk=document.createElement("p");
+ risk.textContent="Risk: "+(slip.riskLabel||"Not set");
+
+ const codes=document.createElement("p");
+
+ codes.textContent=(slip.bookingCodes||[])
+  .map(x=>x.bookmaker+": "+x.code)
+  .join(" | ")||"No booking codes";
+
+ const kickoff=document.createElement("p");
+
+ kickoff.textContent=slip.kickoffAt
+  ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
+  :"Kick-Off: Not set";
+
+ card.append(
+  title,
+  odds,
+  category,
+  price,
+  risk,
+  codes,
+  kickoff
+ );
+
+ if(isHistory){
+
+  const status=document.createElement("p");
+  status.className="locked";
+  status.textContent="HISTORY - KICK-OFF TIME REACHED";
+
+  card.appendChild(status);
+
+ }else{
+
+  const status=document.createElement("p");
+  status.className="started";
+  status.textContent="ACTIVE - AUTOMATIC COUNTDOWN";
+
+  const countdown=document.createElement("div");
+  countdown.className="countdown";
+
+  card.append(status,countdown);
+
+  return {
+   card,
+   countdown,
+   kickoffTime:new Date(slip.kickoffAt).getTime()
+  };
+
+ }
+
+ return {card};
+
+}
+
+/* LOAD ACTIVE SLIPS AND BOOKING SLIP HISTORY */
 
 async function loadMySlips(){
 
- const list=document.getElementById("mySlips");
+ const activeList=document.getElementById("myActiveSlips");
+ const historyList=document.getElementById("mySlipHistory");
 
- list.textContent="Loading...";
+ activeList.textContent="Loading...";
+ historyList.textContent="Loading...";
 
  if(countdownTimer){
   clearInterval(countdownTimer);
@@ -705,78 +788,96 @@ async function loadMySlips(){
   const result=await request("/api/slips/mine");
   const slips=result.slips||[];
 
-  list.innerHTML="";
+  activeList.innerHTML="";
+  historyList.innerHTML="";
 
   if(!slips.length){
-   list.textContent="Bado hujachapisha Booking Slip.";
+
+   activeList.innerHTML=
+    '<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
+
+   historyList.innerHTML=
+    '<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
+
    return;
   }
 
   const countdownEntries=[];
 
+  const activeSlips=[];
+  const historySlips=[];
+
+  const now=serverNow();
+
   slips.forEach(slip=>{
 
-   const card=document.createElement("div");
-   card.className="tip";
+   const kickoffTime=slip.kickoffAt
+    ?new Date(slip.kickoffAt).getTime()
+    :null;
 
-   const title=document.createElement("h3");
-   title.textContent=slip.title;
+   const hasReachedKickoff=
+    kickoffTime!==null&&
+    (!Number.isFinite(kickoffTime)||kickoffTime<=now);
 
-   const odds=document.createElement("p");
-   odds.textContent="Total Odds: "+slip.totalOdds;
+   const isHistory=
+    slip.isLocked===true||
+    slip.isPublished===false||
+    hasReachedKickoff;
 
-   const category=document.createElement("p");
-   category.textContent="Category: "+slip.category;
+   if(isHistory){
+    historySlips.push(slip);
+   }else{
+    activeSlips.push(slip);
+   }
 
-   const codes=document.createElement("p");
+  });
 
-   codes.textContent=(slip.bookingCodes||[])
-    .map(x=>x.bookmaker+": "+x.code)
-    .join(" | ");
+  /* SHOW ACTIVE SLIPS */
 
-   const kickoff=document.createElement("p");
+  activeSlips.forEach(slip=>{
 
-   kickoff.textContent=slip.kickoffAt
-    ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
-    :"Kick-Off: Not set";
+   const item=createSlipCard(slip,false);
 
-   const status=document.createElement("p");
+   activeList.appendChild(item.card);
 
-   const countdown=document.createElement("div");
-   countdown.className="countdown";
-
-   card.append(title,odds,category,codes,kickoff);
-
-   if(slip.isLocked){
-
-    status.className="locked";
-    status.textContent="LOCKED - KICK-OFF TIME REACHED";
-
-    card.append(status);
-
-   }else if(slip.kickoffAt){
-
-    status.className="started";
-    status.textContent="AUTOMATIC COUNTDOWN";
-
-    card.append(status,countdown);
+   if(item.countdown){
 
     countdownEntries.push({
-     kickoffTime:new Date(slip.kickoffAt).getTime(),
-     element:countdown
+     kickoffTime:item.kickoffTime,
+     element:item.countdown
     });
-
-   }else{
-
-    status.textContent="Hakuna muda wa Kick-Off uliowekwa.";
-
-    card.append(status);
 
    }
 
-   list.appendChild(card);
+  });
+
+  /* SHOW HISTORY SLIPS */
+
+  historySlips.forEach(slip=>{
+
+   const item=createSlipCard(slip,true);
+
+   historyList.appendChild(item.card);
 
   });
+
+  if(!activeSlips.length){
+
+   activeList.innerHTML=
+    '<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
+
+  }
+
+  if(!historySlips.length){
+
+   historyList.innerHTML=
+    '<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
+
+  }
+
+  /* AUTOMATIC COUNTDOWN */
+
+  let refreshing=false;
 
   const updateCountdowns=()=>{
 
@@ -799,7 +900,9 @@ async function loadMySlips(){
 
    });
 
-   if(expired){
+   if(expired&&!refreshing){
+
+    refreshing=true;
 
     if(countdownTimer){
      clearInterval(countdownTimer);
@@ -820,7 +923,8 @@ async function loadMySlips(){
 
  }catch(error){
 
-  list.textContent=error.message;
+  activeList.textContent=error.message;
+  historyList.textContent=error.message;
 
  }
 
