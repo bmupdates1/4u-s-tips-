@@ -1,0 +1,250 @@
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1">  
+<title>Tipster Profile | 4U'S TIPS</title>  <style>  
+*{box-sizing:border-box}  
+body{margin:0;font-family:Arial;background:#071b15;color:white}  
+header{background:#063b2b;border-bottom:2px solid #d4af37;padding:18px;text-align:center}  
+h1,h2,h3{color:#d4af37}  
+main{max-width:650px;margin:auto;padding:18px}  
+.panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}  
+button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px;border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}  
+.secondary{background:#063b2b;color:white;border:1px solid #d4af37}  
+.avatar{width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #d4af37}  
+.profile{text-align:center}  
+.stats{color:#d4af37}  
+.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}  
+.message{color:#d4af37}  
+.locked{border:1px solid #d4af37;background:#18251e}  
+.lock-label{color:#d4af37;font-weight:bold}  
+.premium-title{color:#d4af37}  
+.free-title{color:#35d39a}  
+</style>  </head>  <body>  <header>  
+<h1>4U'S TIPS</h1>  
+<p>PREDICT SMARTER</p>  
+</header>  <main>  <div class="panel">  
+<button class="secondary" onclick="goBack()">← Back to Tipsters</button>  
+</div>  <div class="panel profile" id="profile">  
+<p class="message">Loading Tipster profile...</p>  
+</div>  <div class="panel">  
+<h2 class="free-title">FREE TIPS</h2>  
+<div id="freeTips">Loading FREE tips...</div>  
+</div>  <div class="panel">  
+<h2 class="premium-title">PREMIUM TIPS 🔒</h2>  
+<div id="premiumTips">Loading PREMIUM tips...</div>  
+</div>  </main>  <script>  
+const API=window.location.origin;  
+const params=new URLSearchParams(window.location.search);  
+const tipsterId=params.get("id");  
+let token="";  
+  
+async function request(path){  
+ const response=await fetch(API+path,{  
+  headers:{"Authorization":"Bearer "+token}  
+ });  
+  
+ const data=await response.json();  
+  
+ if(!response.ok){  
+  throw new Error(data.error||"Request failed");  
+ }  
+  
+ return data;  
+}  
+  
+function goBack(){  
+ window.location.href="index.html";  
+}  
+  
+function showError(message){  
+ document.getElementById("profile").textContent=message;  
+ document.getElementById("freeTips").textContent=message;  
+ document.getElementById("premiumTips").textContent=message;  
+}  
+  
+function createFreeTip(tip){  
+ const card=document.createElement("div");  
+ card.className="tip";  
+  
+ const match=document.createElement("h3");  
+ match.textContent=tip.matchName||"Match";  
+  
+ const prediction=document.createElement("p");  
+ prediction.textContent="Prediction: "+(tip.prediction||"Not available");  
+  
+ const odds=document.createElement("p");  
+ odds.textContent="Odds: "+(tip.odds??"Not set");  
+  
+ const result=document.createElement("p");  
+ result.textContent="Result: "+(tip.result||"Pending");  
+  
+ card.append(match,prediction,odds,result);  
+  
+ return card;  
+}  
+  
+function createPremiumTip(tip){  
+ const card=document.createElement("div");  
+ card.className="tip locked";  
+  
+ const label=document.createElement("p");  
+ label.className="lock-label";  
+ label.textContent="🔒 PREMIUM LOCKED";  
+  
+ const match=document.createElement("h3");  
+ match.textContent=tip.matchName||"Premium Match";  
+  
+ const info=document.createElement("p");  
+ info.textContent="This is an exclusive Premium tip.";  
+  
+ const hidden=document.createElement("p");  
+ hidden.textContent="Prediction: 🔒 Hidden";  
+  
+ const odds=document.createElement("p");  
+ odds.textContent="Odds: 🔒 Hidden";  
+  
+ const button=document.createElement("button");  
+ button.textContent="PREMIUM ACCESS COMING SOON";  
+ button.disabled=true;  
+ button.style.opacity="0.7";  
+ button.style.cursor="not-allowed";  
+  
+ card.append(label,match,info,hidden,odds,button);  
+  
+ return card;  
+}  
+  
+async function loadProfile(){  
+ try{  
+  if(!tipsterId){  
+   throw new Error("Tipster ID haipo kwenye link.");  
+  }  
+  
+  const savedToken=sessionStorage.getItem("4u_customer_token");  
+  
+  if(!savedToken){  
+   throw new Error("Tafadhali login kwanza kupitia Customer Website.");  
+  }  
+  
+  token=savedToken;  
+  
+  const me=await request("/api/auth/me");  
+  
+  if(me.user.role!=="CUSTOMER"){  
+   throw new Error("Tumia akaunti ya Customer.");  
+  }  
+  
+  const result=await request(  
+   "/api/tipsters/"+encodeURIComponent(tipsterId)  
+  );  
+  
+  const t=result.tipster;  
+  
+  if(!t){  
+   throw new Error("Tipster profile haijapatikana.");  
+  }  
+  
+  const profile=document.getElementById("profile");  
+  profile.innerHTML="";  
+  
+  const img=document.createElement("img");  
+  img.className="avatar";  
+  img.src=t.profileImage||  
+   "https://placehold.co/120x120/063b2b/d4af37?text=4U";  
+  
+  img.onerror=()=>{  
+   img.src="https://placehold.co/120x120/063b2b/d4af37?text=4U";  
+  };  
+  
+  const name=document.createElement("h2");  
+  name.textContent=t.username;  
+  
+  const followers=document.createElement("p");  
+  followers.className="stats";  
+  followers.textContent="Followers: "+t.followers;  
+  
+  const accuracy=document.createElement("h3");  
+  accuracy.textContent="Winning Accuracy: "+t.accuracy+"%";  
+  
+  const record=document.createElement("p");  
+  record.textContent="Wins: "+t.wins+" | Losses: "+t.losses;  
+  
+  const follow=document.createElement("button");  
+  follow.textContent=t.isFollowing?"Unfollow":"Follow";  
+  follow.onclick=()=>changeFollow(t.isFollowing);  
+  
+  profile.append(  
+   img,  
+   name,  
+   followers,  
+   accuracy,  
+   record,  
+   follow  
+  );  
+  
+  const tips=t.tips||[];  
+  
+  const freeTips=tips.filter(  
+   tip=>tip.category==="FREE"  
+  );  
+  
+  const premiumTips=tips.filter(  
+   tip=>tip.category==="PREMIUM"  
+  );  
+  
+  const freeList=document.getElementById("freeTips");  
+  const premiumList=document.getElementById("premiumTips");  
+  
+  freeList.innerHTML="";  
+  premiumList.innerHTML="";  
+  
+  if(!freeTips.length){  
+   freeList.textContent="Hakuna FREE tips kwa sasa.";  
+  }else{  
+   freeTips.forEach(tip=>{  
+    freeList.appendChild(createFreeTip(tip));  
+   });  
+  }  
+  
+  if(!premiumTips.length){  
+   premiumList.textContent="Hakuna PREMIUM tips kwa sasa.";  
+  }else{  
+   premiumTips.forEach(tip=>{  
+    premiumList.appendChild(createPremiumTip(tip));  
+   });  
+  }  
+  
+ }catch(error){  
+  showError(error.message);  
+ }  
+}  
+  
+async function changeFollow(isFollowing){  
+ try{  
+  const response=await fetch(  
+   API+"/api/follows/"+encodeURIComponent(tipsterId),  
+   {  
+    method:isFollowing?"DELETE":"POST",  
+    headers:{  
+     "Authorization":"Bearer "+token  
+    }  
+   }  
+  );  
+  
+  const data=await response.json();  
+  
+  if(!response.ok){  
+   throw new Error(data.error||"Follow action failed");  
+  }  
+  
+  await loadProfile();  
+  
+ }catch(error){  
+  alert(error.message);  
+ }  
+}  
+  
+loadProfile();  
+</script>  </body>  
+</html>
