@@ -8,15 +8,17 @@ const router = Router();
 
 router.use(requireAuth);
 
-// LOCK SLIPS WHEN KICK-OFF TIME EXPIRES
+// AUTOMATICALLY LOCK SLIPS WHEN KICK-OFF TIME ARRIVES
 async function lockExpiredSlips() {
   const now = new Date();
 
   await prisma.slip.updateMany({
     where: {
-  isLocked: false,
-  kickoffAt: { lte: now }
-},
+      isLocked: false,
+      kickoffAt: {
+        lte: now
+      }
+    },
     data: {
       isLocked: true
     }
@@ -29,7 +31,10 @@ const slipSchema = z.object({
   totalOdds: z.coerce.number().positive(),
   price: z.coerce.number().min(0).default(0),
   validityUntil: z.coerce.date().optional(),
-  kickoffAt: z.coerce.date().optional(),
+
+  // KICK-OFF TIME IS REQUIRED
+  kickoffAt: z.coerce.date(),
+
   category: z.enum(["FREE", "PREMIUM"]),
   bookingCodes: z.array(
     z.object({
@@ -58,6 +63,14 @@ router.post("/", async (req, res) => {
 
   try {
     const data = parsed.data;
+
+    const now = new Date();
+
+    if (data.kickoffAt <= now) {
+      return res.status(400).json({
+        error: "Kick-off time must be in the future"
+      });
+    }
 
     const bookmakers = data.bookingCodes.map(
       item => item.bookmaker
@@ -110,7 +123,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// TIPSTER STARTS KICK-OFF COUNTDOWN
+// OLD START-KICKOFF ENDPOINT KEPT FOR DASHBOARD COMPATIBILITY
 router.patch("/:id/start-kickoff", async (req, res) => {
   try {
     const slip = await prisma.slip.findUnique({
@@ -260,7 +273,7 @@ router.get("/", async (req, res) => {
       }
     });
 
-    // Never expose premium booking codes to customers.
+    // NEVER EXPOSE PREMIUM CODES TO CUSTOMERS
     const safeSlips = slips.map(slip => {
       if (
         req.user.role === "CUSTOMER" &&
@@ -273,7 +286,7 @@ router.get("/", async (req, res) => {
         };
       }
 
-      // Hide booking codes on locked slips.
+      // HIDE CODES AFTER KICK-OFF
       if (
         req.user.role === "CUSTOMER" &&
         slip.isLocked
@@ -327,7 +340,7 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    // Customers cannot access premium booking codes.
+    // CUSTOMERS CANNOT ACCESS PREMIUM CODES
     if (
       req.user.role === "CUSTOMER" &&
       slip.category === "PREMIUM"
@@ -337,7 +350,7 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    // Customers cannot access codes after a slip is locked.
+    // CUSTOMERS CANNOT ACCESS LOCKED CODES
     if (
       req.user.role === "CUSTOMER" &&
       slip.isLocked
