@@ -14,10 +14,9 @@ async function lockExpiredSlips() {
 
   await prisma.slip.updateMany({
     where: {
-      isLocked: false,
-      kickoffStartedAt: { not: null },
-      kickoffAt: { lte: now }
-    },
+  isLocked: false,
+  kickoffAt: { lte: now }
+},
     data: {
       isLocked: true
     }
