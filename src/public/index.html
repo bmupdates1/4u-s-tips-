@@ -1,5 +1,6 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sw">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,20 +13,24 @@ h1,h2{color:#d4af37}
 main{max-width:700px;margin:auto;padding:18px}
 .panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:18px;margin-bottom:18px}
 input,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px}
+input{background:#071b15;color:white;border:1px solid #315644}
 button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer}
 .secondary{background:#063b2b;color:white;border:1px solid #d4af37}
 .hidden{display:none}
 .tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0}
 .message,.stats{color:#d4af37;font-size:14px}
+.countdown{font-weight:bold;color:#d4af37;font-size:20px}
+.locked{color:#ff7777;font-weight:bold;font-size:18px}
+.kickoff-box{background:#063b2b;border:1px solid #d4af37;border-radius:8px;padding:12px;margin:12px 0}
 .tipster-card{display:flex;align-items:center;gap:13px;cursor:pointer}
-.avatar{width:65px;height:65px;border-radius:50%;object-fit:cover;border:2px solid #d4af37;background:#063b2b}
+.avatar{width:65px;height:65px;border-radius:50%;object-fit:cover;border:2px solid #d4af37}
 .tipster-info{flex:1;min-width:0}
 .tipster-info h3{margin:5px 0;color:#d4af37}
 </style>
 </head>
 <body>
 <header>
-<h1>4U'S TIPS</h1>
+<h1>4U'S TIPS ⚽</h1>
 <p>PREDICT SMARTER</p>
 </header>
 <main>
@@ -73,6 +78,7 @@ button{border:0;background:#d4af37;color:#102a21;font-weight:bold;cursor:pointer
 <script>
 const API=window.location.origin;
 let token=sessionStorage.getItem("4u_customer_token")||"";
+let countdownIntervals=[];
 
 async function request(path,options={}){
  const response=await fetch(API+path,{
@@ -84,8 +90,8 @@ async function request(path,options={}){
  });
  const text=await response.text();
  let data={};
- try{data=JSON.parse(text);}
- catch{throw new Error("Server response: "+text.slice(0,200));}
+ try{data=JSON.parse(text)}
+ catch{throw new Error("Server response: "+text.slice(0,200))}
  if(!response.ok)throw new Error(data.error||"HTTP Error "+response.status);
  return data;
 }
@@ -102,7 +108,7 @@ async function register(){
    })
   });
   message.textContent="Account imetengenezwa! Sasa unaweza Login.";
- }catch(error){message.textContent=error.message;}
+ }catch(error){message.textContent=error.message}
 }
 
 async function login(){
@@ -135,14 +141,19 @@ function showCustomer(username){
  loadTipsters();
 }
 
+function clearCountdowns(){
+ countdownIntervals.forEach(id=>clearInterval(id));
+ countdownIntervals=[];
+}
+
 async function loadTips(){
  const list=document.getElementById("tipsList");
+ clearCountdowns();
  list.textContent="Loading...";
  try{
   const result=await request("/api/slips");
   const slips=result.slips||[];
   list.innerHTML="";
-
   if(!slips.length){
    list.textContent="Hakuna FREE booking slips kwa sasa.";
    return;
@@ -161,19 +172,64 @@ async function loadTips(){
    const tipster=document.createElement("p");
    tipster.textContent="Tipster: "+(slip.tipster?.username||"Unknown");
 
-   card.append(title,odds,tipster);
+   const kickoffBox=document.createElement("div");
+   kickoffBox.className="kickoff-box";
 
+   const label=document.createElement("p");
+   label.textContent="⚽ KICK-OFF COUNTDOWN";
+
+   const timer=document.createElement("div");
+   timer.className="countdown";
+
+   const codes=document.createElement("div");
    (slip.bookingCodes||[]).forEach(code=>{
     const p=document.createElement("p");
-    p.textContent=code.bookmaker+": "+code.code;
-    card.appendChild(p);
+    p.textContent=(code.bookmaker||"Bookmaker")+": "+(code.code||"");
+    codes.appendChild(p);
    });
 
+   kickoffBox.append(label,timer);
+   card.append(title,odds,tipster,kickoffBox,codes);
    list.appendChild(card);
+
+   if(!slip.kickoffAt){
+    timer.textContent="Kick-Off haijawekwa";
+    return;
+   }
+
+   const kickoff=new Date(slip.kickoffAt).getTime();
+   if(!Number.isFinite(kickoff)){
+    timer.textContent="Tarehe ya Kick-Off si sahihi";
+    return;
+   }
+
+   function update(){
+    const remaining=kickoff-Date.now();
+    if(remaining<=0){
+     timer.textContent="🔒 LOCKED";
+     timer.className="locked";
+     codes.style.display="none";
+     return false;
+    }
+    const d=Math.floor(remaining/86400000);
+    const h=Math.floor((remaining%86400000)/3600000);
+    const m=Math.floor((remaining%3600000)/60000);
+    const s=Math.floor((remaining%60000)/1000);
+    timer.textContent=d+"d : "+String(h).padStart(2,"0")+"h : "+String(m).padStart(2,"0")+"m : "+String(s).padStart(2,"0")+"s";
+    return true;
+   }
+
+   if(update()){
+    const interval=setInterval(()=>{
+     if(!update()){
+      clearInterval(interval);
+      countdownIntervals=countdownIntervals.filter(x=>x!==interval);
+     }
+    },1000);
+    countdownIntervals.push(interval);
+   }
   });
- }catch(error){
-  list.textContent=error.message;
- }
+ }catch(error){list.textContent=error.message}
 }
 
 async function loadTipsters(){
@@ -227,13 +283,10 @@ async function loadTipsters(){
     event.stopPropagation();
     changeFollow(tipster.id,tipster.isFollowing);
    };
-
    card.append(row,button);
    list.appendChild(card);
   });
- }catch(error){
-  list.textContent=error.message;
- }
+ }catch(error){list.textContent=error.message}
 }
 
 function openTipster(id){
@@ -246,10 +299,11 @@ async function changeFollow(id,isFollowing){
    method:isFollowing?"DELETE":"POST"
   });
   await loadTipsters();
- }catch(error){alert(error.message);}
+ }catch(error){alert(error.message)}
 }
 
 function logout(){
+ clearCountdowns();
  token="";
  sessionStorage.removeItem("4u_customer_token");
  document.getElementById("customerSection").classList.add("hidden");
@@ -269,7 +323,6 @@ async function restoreSession(){
   sessionStorage.removeItem("4u_customer_token");
  }
 }
-
 restoreSession();
 </script>
 </body>
