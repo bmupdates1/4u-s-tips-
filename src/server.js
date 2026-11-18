@@ -84,12 +84,44 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: "2mb" }));
+
 app.use(express.static("src/public"));
 
-app.use(rateLimit({
+/*
+  GENERAL API RATE LIMIT
+
+  Increased from 200 to 1000 requests per 15 minutes.
+  This prevents normal dashboard activity from hitting
+  the previous low limit too quickly.
+*/
+
+const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 200
-}));
+  limit: 1000,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    error: "Too many requests. Please try again later."
+  }
+});
+
+/*
+  LOGIN RATE LIMIT
+
+  Login has its own stricter protection.
+  Failed or excessive login attempts are limited.
+*/
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: {
+    error: "Too many login attempts. Please try again later."
+  }
+});
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -97,6 +129,14 @@ app.get("/health", (_req, res) => {
     app: "4U'S TIPS API"
   });
 });
+
+/* API RATE LIMITS */
+
+app.use("/api", apiLimiter);
+
+app.use("/api/auth", authLimiter);
+
+/* API ROUTES */
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tips", tipsRoutes);
