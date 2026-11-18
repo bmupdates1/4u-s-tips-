@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
@@ -110,12 +109,69 @@ router.post("/", async (req, res) => {
       message: "Betslip published successfully",
       slip
     });
-
   } catch (error) {
     console.error("Publish slip error:", error);
 
     return res.status(500).json({
       error: "Could not publish betslip"
+    });
+  }
+});
+
+// DELETE OWN BOOKING SLIP
+router.delete("/:id", async (req, res) => {
+  if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
+    return res.status(403).json({
+      error: "Only Tipsters and Admin can delete booking slips"
+    });
+  }
+
+  try {
+    const slip = await prisma.slip.findFirst({
+      where: {
+        id: req.params.id,
+        tipsterId: req.user.id
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!slip) {
+      return res.status(404).json({
+        error: "Booking slip not found or you are not allowed to delete it"
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Delete related booking codes first
+      await tx.slip.update({
+        where: {
+          id: slip.id
+        },
+        data: {
+          bookingCodes: {
+            deleteMany: {}
+          }
+        }
+      });
+
+      // Then delete the booking slip
+      await tx.slip.delete({
+        where: {
+          id: slip.id
+        }
+      });
+    });
+
+    return res.json({
+      message: "Booking slip deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete slip error:", error);
+
+    return res.status(500).json({
+      error: "Could not delete booking slip"
     });
   }
 });
@@ -202,7 +258,6 @@ router.patch("/:id/start-kickoff", async (req, res) => {
       slip: startedSlip,
       serverTime: now.toISOString()
     });
-
   } catch (error) {
     console.error("Start kickoff error:", error);
 
@@ -232,7 +287,6 @@ router.get("/mine", async (req, res) => {
     console.log("[SLIPS-MINE] Successfully loaded:", slips.length);
 
     return res.status(200).json({ slips });
-
   } catch (error) {
     console.error("[SLIPS-MINE] Database error:", error);
 
@@ -289,7 +343,6 @@ router.get("/", async (req, res) => {
     return res.json({
       slips: safeSlips
     });
-
   } catch (error) {
     console.error("Load slips error:", error);
 
@@ -337,7 +390,6 @@ router.get("/:id", async (req, res) => {
     }
 
     return res.json({ slip });
-
   } catch (error) {
     console.error("View slip error:", error);
 
