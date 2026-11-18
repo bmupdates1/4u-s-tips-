@@ -214,8 +214,14 @@ router.patch("/:id/start-kickoff", async (req, res) => {
 
 // TIPSTER HISTORY AND ACTIVE SLIPS
 router.get("/mine", async (req, res) => {
+  console.log("[SLIPS-MINE] Request received:", req.user.id);
+
   try {
+    console.log("[SLIPS-MINE] Checking expired slips...");
     await lockExpiredSlips();
+    console.log("[SLIPS-MINE] Expired-slip check completed.");
+
+    console.log("[SLIPS-MINE] Loading slips from database...");
 
     const slips = await prisma.slip.findMany({
       where: {
@@ -229,10 +235,12 @@ router.get("/mine", async (req, res) => {
       }
     });
 
+    console.log("[SLIPS-MINE] Slips found:", slips.length);
+
     return res.json({ slips });
 
   } catch (error) {
-    console.error("Load own slips error:", error);
+    console.error("[SLIPS-MINE] ERROR:", error);
 
     return res.status(500).json({
       error: "Could not load your betslips"
