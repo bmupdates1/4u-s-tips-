@@ -5,7 +5,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>4U'S TIPS - Tipster Dashboard</title>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#071b15;color:white}
@@ -33,18 +32,19 @@ label{display:block;margin-top:12px}
 .empty-message{color:#aaa;text-align:center;padding:12px}
 .delete-button{background:#a82020;color:white;border:1px solid #ff6969;margin-top:12px}
 .delete-button:hover{background:#d12d2d}
+.tip-group{margin:12px 0;padding:12px;border:1px solid #315b49;border-radius:10px;background:#092f25}
+.tip-group summary{cursor:pointer;font-weight:bold;padding:8px;user-select:none}
+.tip-group summary::marker{color:#d4af37}
+.tip-group summary:hover{opacity:.85}
+.tip-group>div{padding-top:10px}
 </style>
 </head>
-
 <body>
-
 <header>
 <h1>4U'S TIPS ⚽</h1>
 <p>TIPSTER DASHBOARD</p>
 </header>
-
 <main>
-
 <section id="loginSection">
 <div class="panel">
 <h2>Tipster Login</h2>
@@ -56,7 +56,6 @@ label{display:block;margin-top:12px}
 </section>
 
 <section id="dashboard" class="hidden">
-
 <div class="panel">
 <h2 id="welcome">Welcome Tipster</h2>
 <button class="secondary" onclick="loadMyTips()">REFRESH MY TIPS</button>
@@ -67,91 +66,67 @@ label{display:block;margin-top:12px}
 
 <div class="panel">
 <h2>MY PROFILE PICTURE</h2>
-<p class="message">
-Chagua picha kutoka Gallery ya simu yako.
-Picha itaonekana kwenye Home Page na Profile yako.
-</p>
-
-<img id="profilePicturePreview"
-class="profile-preview"
-alt="Profile picture preview"
-src="https://placehold.co/120x120/063b2b/d4af37?text=4U">
-
+<p class="message">Chagua picha kutoka Gallery ya simu yako. Picha itaonekana kwenye Home Page na Profile yako.</p>
+<img id="profilePicturePreview" class="profile-preview" alt="Profile picture preview" src="https://placehold.co/120x120/063b2b/d4af37?text=4U">
 <label>Chagua picha kutoka Gallery</label>
-<input id="profilePictureFile" type="file"
-accept="image/jpeg,image/png,image/webp"
-onchange="previewProfilePicture()">
-
+<input id="profilePictureFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewProfilePicture()">
 <button onclick="uploadProfilePicture()">SAVE PROFILE PICTURE</button>
 <p id="profilePictureMessage" class="message"></p>
 </div>
 
 <div class="panel">
 <h2>PUBLISH NEW MATCH TIP</h2>
-<p class="message">
-Chapisha prediction yako. FREE itaonekana wazi kwa Customers.
-PREMIUM itaonekana LOCKED kwa Customers.
-</p>
-
+<p class="message">Chapisha prediction yako. FREE itaonekana wazi kwa Customers. PREMIUM itaonekana LOCKED kwa Customers.</p>
 <label>Match Name</label>
 <input id="tipMatchName" placeholder="Mfano: Arsenal vs Chelsea" maxlength="200">
-
 <label>Prediction</label>
 <input id="tipPrediction" placeholder="Mfano: Arsenal Win" maxlength="200">
-
 <label>Odds</label>
 <input id="tipOdds" type="number" step="0.01" min="0.01" max="10000" placeholder="Mfano: 1.85">
-
 <label>Category</label>
 <select id="tipCategory">
 <option value="FREE">FREE</option>
 <option value="PREMIUM">PREMIUM</option>
 </select>
-
 <label>Kick-Off Date and Time (optional)</label>
 <input id="tipKickoffAt" type="datetime-local">
-
 <button onclick="publishTip()">PUBLISH MATCH TIP</button>
 <p id="tipPublishMessage" class="message"></p>
 </div>
 
 <div class="panel">
 <h2>MY PUBLISHED MATCH TIPS</h2>
-<div id="myTips">Login kwanza...</div>
+<details class="tip-group">
+<summary class="free-title">🟢 FREE TIPS (<span id="freeTipCount">0</span>)</summary>
+<div id="myFreeTips">Login kwanza...</div>
+</details>
+<details class="tip-group">
+<summary class="premium-title">🔒 PREMIUM TIPS (<span id="premiumTipCount">0</span>)</summary>
+<div id="myPremiumTips">Login kwanza...</div>
+</details>
 </div>
 
 <div class="panel">
 <h2>PUBLISH NEW BOOKING SLIP</h2>
-
 <input id="title" placeholder="Slip title" maxlength="100">
 <input id="riskLabel" placeholder="Risk label (optional)" maxlength="50">
 <input id="totalOdds" type="number" step="0.01" min="0.01" placeholder="Total odds">
-
 <label>SportyBet Booking Code</label>
 <input id="sportyCode" placeholder="Enter SportyBet code">
-
 <label>BetPawa Booking Code</label>
 <input id="betpawaCode" placeholder="Enter BetPawa code">
-
 <label>Category</label>
 <select id="category">
 <option value="FREE">FREE</option>
 <option value="PREMIUM">PREMIUM</option>
 </select>
-
 <label>Price (0 for FREE)</label>
 <input id="price" type="number" min="0" step="0.01" placeholder="Price">
-
 <label>Kick-Off Date and Time</label>
 <input id="kickoffAt" type="datetime-local">
-
 <label>Slip Validity (optional)</label>
 <input id="validityUntil" type="datetime-local">
-
-<p class="message">
-Weka muda wa Kick-Off. Countdown itaanza moja kwa moja baada ya kuchapisha Booking Slip.
-</p>
-
+<p class="message">Weka muda wa Kick-Off. Countdown itaanza moja kwa moja baada ya kuchapisha Booking Slip.</p>
 <button onclick="publishSlip()">PUBLISH BOOKING SLIP</button>
 <p id="publishMessage" class="message"></p>
 </div>
@@ -167,26 +142,19 @@ Weka muda wa Kick-Off. Countdown itaanza moja kwa moja baada ya kuchapisha Booki
 <p class="message">Slips zilizofikia muda wa Kick-Off zitahifadhiwa hapa pamoja na booking codes zake.</p>
 <div id="mySlipHistory">History itaonekana hapa...</div>
 </div>
-
 </section>
 </main>
 
 <script>
-
 const API=window.location.origin;
-
 let token="";
 let currentUserId="";
 let serverOffset=0;
 let countdownTimer=null;
-
 let slipsLoading=false;
 let countdownRefreshInProgress=false;
 
-/* API REQUEST */
-
 async function request(path,options={}){
-
  const response=await fetch(API+path,{
   ...options,
   headers:{
@@ -194,27 +162,13 @@ async function request(path,options={}){
    ...(token?{"Authorization":"Bearer "+token}:{})
   }
  });
-
  const serverDate=response.headers.get("Date");
-
- if(serverDate){
-  serverOffset=new Date(serverDate).getTime()-Date.now();
- }
-
+ if(serverDate)serverOffset=new Date(serverDate).getTime()-Date.now();
  const text=await response.text();
-
  let data={};
-
- try{
-  data=text?JSON.parse(text):{};
- }catch{
-  throw new Error("Server response: "+text.slice(0,200));
- }
-
- if(!response.ok){
-  throw new Error(data.error||data.message||"Request failed");
- }
-
+ try{data=text?JSON.parse(text):{};}
+ catch{throw new Error("Server response: "+text.slice(0,200));}
+ if(!response.ok)throw new Error(data.error||data.message||"Request failed");
  return data;
 }
 
@@ -222,83 +176,44 @@ function serverNow(){
  return Date.now()+serverOffset;
 }
 
-/* DELETE BUTTON */
-
 function createDeleteButton(type,id){
-
  const button=document.createElement("button");
-
  button.type="button";
  button.className="delete-button";
  button.textContent="DELETE";
  button.onclick=()=>deleteItem(type,id,button);
-
  return button;
 }
 
-/* DELETE MATCH TIP OR BOOKING SLIP */
-
 async function deleteItem(type,id,button){
-
  if(!token||!id){
   alert("Taarifa haijapatikana. Login tena.");
   return;
  }
-
  const itemName=type==="tip"?"Match Tip":"Booking Slip";
-
- const confirmed=window.confirm(
-  "Una uhakika unataka kufuta "+itemName+" hii?\n\nKitendo hiki hakiwezi kurudishwa."
- );
-
- if(!confirmed)return;
-
+ if(!window.confirm("Una uhakika unataka kufuta "+itemName+" hii?\n\nKitendo hiki hakiwezi kurudishwa."))return;
  button.disabled=true;
  button.textContent="DELETING...";
-
  try{
-
-  const endpoint=type==="tip"
-   ?"/api/tips/"
-   :"/api/slips/";
-
-  await request(endpoint+encodeURIComponent(id),{
-   method:"DELETE"
-  });
-
+  const endpoint=type==="tip"?"/api/tips/":"/api/slips/";
+  await request(endpoint+encodeURIComponent(id),{method:"DELETE"});
   alert(itemName+" imefutwa kikamilifu.");
-
-  if(type==="tip"){
-   await loadMyTips();
-  }else{
-   await loadMySlips();
-  }
-
+  if(type==="tip")await loadMyTips();
+  else await loadMySlips();
  }catch(error){
-
   alert("Imeshindikana kufuta: "+error.message);
-
   button.disabled=false;
   button.textContent="DELETE";
-
  }
-
 }
 
-/* LOGIN */
-
 async function login(){
-
  const message=document.getElementById("loginMessage");
  const button=document.getElementById("loginButton");
-
  if(button.disabled)return;
-
  button.disabled=true;
  message.textContent="Inaingia...";
-
  try{
-
   const result=await request("/api/auth/login",{
    method:"POST",
    body:JSON.stringify({
@@ -306,230 +221,125 @@ async function login(){
     password:document.getElementById("password").value
    })
   });
-
   token=result.token;
-
   const me=await request("/api/auth/me");
-
   if(!["TIPSTER","SUPER_ADMIN"].includes(me.user.role)){
    token="";
    throw new Error("Akaunti hii si ya Tipster.");
   }
-
   currentUserId=me.user.id;
-
   document.getElementById("loginSection").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
-
-  document.getElementById("welcome").textContent=
-   "Welcome, "+me.user.username;
-
+  document.getElementById("welcome").textContent="Welcome, "+me.user.username;
   message.textContent="";
-
   await loadProfilePicture();
   await loadMyTips();
   await loadMySlips();
-
  }catch(error){
-
   token="";
   currentUserId="";
   message.textContent=error.message;
-
  }finally{
-
   button.disabled=false;
-
  }
-
 }
 
-/* PROFILE PICTURE */
-
 async function loadProfilePicture(){
-
  try{
-
-  const result=await request(
-   "/api/tipsters/"+encodeURIComponent(currentUserId)
-  );
-
+  const result=await request("/api/tipsters/"+encodeURIComponent(currentUserId));
   document.getElementById("profilePicturePreview").src=
    result.tipster?.profileImage||
    "https://placehold.co/120x120/063b2b/d4af37?text=4U";
-
  }catch(error){
-
-  document.getElementById("profilePictureMessage").textContent=
-   error.message;
-
+  document.getElementById("profilePictureMessage").textContent=error.message;
  }
-
 }
 
 function previewProfilePicture(){
-
  const file=document.getElementById("profilePictureFile").files[0];
  const message=document.getElementById("profilePictureMessage");
-
  if(!file)return;
-
  if(!["image/jpeg","image/png","image/webp"].includes(file.type)){
   message.textContent="Tumia picha ya JPG, PNG au WEBP.";
   return;
  }
-
  const reader=new FileReader();
-
  reader.onload=()=>{
   document.getElementById("profilePicturePreview").src=reader.result;
   message.textContent="Preview ya picha. Bonyeza SAVE PROFILE PICTURE.";
  };
-
  reader.onerror=()=>{
   message.textContent="Imeshindikana kusoma picha.";
  };
-
  reader.readAsDataURL(file);
-
 }
 
 async function uploadProfilePicture(){
-
  const file=document.getElementById("profilePictureFile").files[0];
  const message=document.getElementById("profilePictureMessage");
-
  if(!file){
   message.textContent="Chagua picha kutoka Gallery kwanza.";
   return;
  }
-
  if(!["image/jpeg","image/png","image/webp"].includes(file.type)){
   message.textContent="Tumia picha ya JPG, PNG au WEBP.";
   return;
  }
-
  message.textContent="Inahifadhi picha...";
-
  try{
-
   const dataUrl=await new Promise((resolve,reject)=>{
-
    const reader=new FileReader();
-
    reader.onload=()=>resolve(reader.result);
    reader.onerror=()=>reject(new Error("Imeshindikana kusoma picha."));
-
    reader.readAsDataURL(file);
-
   });
-
   const image=await new Promise((resolve,reject)=>{
-
    const img=new Image();
-
    img.onload=()=>resolve(img);
    img.onerror=()=>reject(new Error("Picha haikuweza kufunguliwa."));
-
    img.src=dataUrl;
-
   });
-
   const maxSide=600;
-
-  const scale=Math.min(
-   1,
-   maxSide/Math.max(image.width,image.height)
-  );
-
+  const scale=Math.min(1,maxSide/Math.max(image.width,image.height));
   const canvas=document.createElement("canvas");
-
   canvas.width=Math.max(1,Math.round(image.width*scale));
   canvas.height=Math.max(1,Math.round(image.height*scale));
-
-  const context=canvas.getContext("2d");
-
-  context.drawImage(image,0,0,canvas.width,canvas.height);
-
+  canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
   const compressed=canvas.toDataURL("image/jpeg",0.78);
-
-  if(compressed.length>1400000){
-   throw new Error("Picha ni kubwa sana. Chagua picha nyingine.");
-  }
-
-  const result=await request(
-   "/api/tipsters/me/profile-image",
-   {
-    method:"PATCH",
-    body:JSON.stringify({
-     profileImage:compressed
-    })
-   }
-  );
-
-  document.getElementById("profilePicturePreview").src=
-   result.profileImage;
-
+  if(compressed.length>1400000)throw new Error("Picha ni kubwa sana. Chagua picha nyingine.");
+  const result=await request("/api/tipsters/me/profile-image",{
+   method:"PATCH",
+   body:JSON.stringify({profileImage:compressed})
+  });
+  document.getElementById("profilePicturePreview").src=result.profileImage;
   document.getElementById("profilePictureFile").value="";
-
-  message.textContent=
-   result.message||"Profile picture imehifadhiwa.";
-
+  message.textContent=result.message||"Profile picture imehifadhiwa.";
  }catch(error){
-
   message.textContent=error.message;
-
  }
-
 }
 
-/* PUBLISH MATCH TIP */
-
 async function publishTip(){
-
  const message=document.getElementById("tipPublishMessage");
-
  try{
-
   const matchName=document.getElementById("tipMatchName").value.trim();
   const prediction=document.getElementById("tipPrediction").value.trim();
   const oddsValue=document.getElementById("tipOdds").value;
   const category=document.getElementById("tipCategory").value;
   const kickoff=document.getElementById("tipKickoffAt").value;
 
-  if(matchName.length<3){
-   throw new Error("Weka majina ya timu au mchezo.");
-  }
-
-  if(!prediction){
-   throw new Error("Weka prediction.");
-  }
-
-  if(oddsValue && (
-   Number(oddsValue)<=0 ||
-   Number(oddsValue)>10000
-  )){
+  if(matchName.length<3)throw new Error("Weka majina ya timu au mchezo.");
+  if(!prediction)throw new Error("Weka prediction.");
+  if(oddsValue&&(Number(oddsValue)<=0||Number(oddsValue)>10000)){
    throw new Error("Odds lazima iwe zaidi ya 0 na isizidi 10000.");
   }
 
-  const payload={
-   matchName,
-   prediction,
-   category
-  };
-
-  if(oddsValue){
-   payload.odds=Number(oddsValue);
-  }
+  const payload={matchName,prediction,category};
+  if(oddsValue)payload.odds=Number(oddsValue);
 
   if(kickoff){
-
    const kickoffDate=new Date(kickoff);
-
-   if(isNaN(kickoffDate.getTime())){
-    throw new Error("Tarehe ya Kick-Off si sahihi.");
-   }
-
+   if(isNaN(kickoffDate.getTime()))throw new Error("Tarehe ya Kick-Off si sahihi.");
    payload.kickoffAt=kickoffDate.toISOString();
   }
 
@@ -539,182 +349,119 @@ async function publishTip(){
   });
 
   message.textContent="Match Tip imechapishwa kikamilifu!";
-
-  [
-   "tipMatchName",
-   "tipPrediction",
-   "tipOdds",
-   "tipKickoffAt"
-  ].forEach(id=>{
+  ["tipMatchName","tipPrediction","tipOdds","tipKickoffAt"].forEach(id=>{
    document.getElementById(id).value="";
   });
-
   await loadMyTips();
-
  }catch(error){
-
   message.textContent=error.message;
-
  }
-
 }
-
-/* LOAD MY MATCH TIPS */
 
 async function loadMyTips(){
+ const freeList=document.getElementById("myFreeTips");
+ const premiumList=document.getElementById("myPremiumTips");
+ if(!freeList||!premiumList)return;
 
- const list=document.getElementById("myTips");
-
- if(!list)return;
-
- list.textContent="Loading...";
+ freeList.textContent="Loading...";
+ premiumList.textContent="Loading...";
 
  try{
-
   const result=await request("/api/tips");
+  const tips=(result.tips||[]).filter(tip=>tip.tipsterId===currentUserId);
+  const freeTips=tips.filter(tip=>tip.category==="FREE");
+  const premiumTips=tips.filter(tip=>tip.category==="PREMIUM");
 
-  const tips=(result.tips||[]).filter(
-   tip=>tip.tipsterId===currentUserId
-  );
+  document.getElementById("freeTipCount").textContent=freeTips.length;
+  document.getElementById("premiumTipCount").textContent=premiumTips.length;
 
-  list.innerHTML="";
+  function renderTips(items,list){
+   list.innerHTML="";
+   if(!items.length){
+    list.textContent="Hakuna tips katika kundi hili kwa sasa.";
+    return;
+   }
+   items.forEach(tip=>{
+    const card=document.createElement("div");
+    card.className="tip";
 
-  if(!tips.length){
-   list.textContent="Bado hujachapisha Match Tip.";
-   return;
+    const match=document.createElement("h3");
+    match.textContent=tip.matchName;
+
+    const prediction=document.createElement("p");
+    prediction.textContent="Prediction: "+tip.prediction;
+
+    const odds=document.createElement("p");
+    odds.textContent="Odds: "+(tip.odds??"Not set");
+
+    const category=document.createElement("p");
+    category.textContent="Category: "+tip.category;
+
+    const resultText=document.createElement("p");
+    resultText.textContent="Result: "+tip.result;
+
+    const kickoff=document.createElement("p");
+    kickoff.textContent=tip.kickoffAt
+     ?"Kick-Off: "+new Date(tip.kickoffAt).toLocaleString()
+     :"Kick-Off: Not set";
+
+    card.append(
+     match,
+     prediction,
+     odds,
+     category,
+     resultText,
+     kickoff,
+     createDeleteButton("tip",tip.id)
+    );
+    list.appendChild(card);
+   });
   }
 
-  tips.forEach(tip=>{
-
-   const card=document.createElement("div");
-   card.className="tip";
-
-   const match=document.createElement("h3");
-   match.textContent=tip.matchName;
-
-   const prediction=document.createElement("p");
-   prediction.textContent="Prediction: "+tip.prediction;
-
-   const odds=document.createElement("p");
-   odds.textContent="Odds: "+(tip.odds??"Not set");
-
-   const category=document.createElement("p");
-   category.textContent="Category: "+tip.category;
-
-   const resultText=document.createElement("p");
-   resultText.textContent="Result: "+tip.result;
-
-   const kickoff=document.createElement("p");
-   kickoff.textContent=tip.kickoffAt
-    ?"Kick-Off: "+new Date(tip.kickoffAt).toLocaleString()
-    :"Kick-Off: Not set";
-
-   card.append(
-    match,
-    prediction,
-    odds,
-    category,
-    resultText,
-    kickoff,
-    createDeleteButton("tip",tip.id)
-   );
-
-   list.appendChild(card);
-
-  });
-
+  renderTips(freeTips,freeList);
+  renderTips(premiumTips,premiumList);
  }catch(error){
-
-  list.textContent=error.message;
-
+  freeList.textContent=error.message;
+  premiumList.textContent=error.message;
  }
-
 }
 
-/* PUBLISH BOOKING SLIP */
-
 async function publishSlip(){
-
  const message=document.getElementById("publishMessage");
-
  try{
-
   const title=document.getElementById("title").value.trim();
   const totalOdds=Number(document.getElementById("totalOdds").value);
   const category=document.getElementById("category").value;
   const price=Number(document.getElementById("price").value||0);
 
-  if(!title){
-   throw new Error("Weka jina la Booking Slip.");
-  }
-
-  if(!Number.isFinite(totalOdds)||totalOdds<=0){
-   throw new Error("Weka Total Odds sahihi.");
-  }
+  if(!title)throw new Error("Weka jina la Booking Slip.");
+  if(!Number.isFinite(totalOdds)||totalOdds<=0)throw new Error("Weka Total Odds sahihi.");
 
   const bookingCodes=[];
-
   const sporty=document.getElementById("sportyCode").value.trim();
   const betpawa=document.getElementById("betpawaCode").value.trim();
 
-  if(sporty){
-   bookingCodes.push({
-    bookmaker:"SportyBet",
-    code:sporty
-   });
-  }
+  if(sporty)bookingCodes.push({bookmaker:"SportyBet",code:sporty});
+  if(betpawa)bookingCodes.push({bookmaker:"BetPawa",code:betpawa});
+  if(!bookingCodes.length)throw new Error("Weka angalau Booking Code moja.");
 
-  if(betpawa){
-   bookingCodes.push({
-    bookmaker:"BetPawa",
-    code:betpawa
-   });
-  }
-
-  if(!bookingCodes.length){
-   throw new Error("Weka angalau Booking Code moja.");
-  }
-
-  if(!Number.isFinite(price)||price<0){
-   throw new Error("Weka bei sahihi.");
-  }
-
-  if(category==="FREE"&&price!==0){
-   throw new Error("FREE slip lazima iwe na bei 0.");
-  }
-
-  if(category==="PREMIUM"&&price<=0){
-   throw new Error("PREMIUM slip lazima iwe na bei zaidi ya 0.");
-  }
+  if(!Number.isFinite(price)||price<0)throw new Error("Weka bei sahihi.");
+  if(category==="FREE"&&price!==0)throw new Error("FREE slip lazima iwe na bei 0.");
+  if(category==="PREMIUM"&&price<=0)throw new Error("PREMIUM slip lazima iwe na bei zaidi ya 0.");
 
   const kickoff=document.getElementById("kickoffAt").value;
-
-  if(!kickoff){
-   throw new Error("Weka tarehe na muda wa Kick-Off.");
-  }
+  if(!kickoff)throw new Error("Weka tarehe na muda wa Kick-Off.");
 
   const kickoffDate=new Date(kickoff);
-
-  if(isNaN(kickoffDate.getTime())){
-   throw new Error("Tarehe ya Kick-Off si sahihi.");
-  }
-
-  if(kickoffDate.getTime()<=serverNow()){
-   throw new Error("Kick-Off lazima iwe muda wa baadaye.");
-  }
+  if(isNaN(kickoffDate.getTime()))throw new Error("Tarehe ya Kick-Off si sahihi.");
+  if(kickoffDate.getTime()<=serverNow())throw new Error("Kick-Off lazima iwe muda wa baadaye.");
 
   const validity=document.getElementById("validityUntil").value;
-
   let validityISO;
 
   if(validity){
-
    const validityDate=new Date(validity);
-
-   if(isNaN(validityDate.getTime())){
-    throw new Error("Slip Validity si sahihi.");
-   }
-
+   if(isNaN(validityDate.getTime()))throw new Error("Slip Validity si sahihi.");
    validityISO=validityDate.toISOString();
   }
 
@@ -733,50 +480,26 @@ async function publishSlip(){
   });
 
   message.textContent="Booking Slip imechapishwa kikamilifu!";
-
-  [
-   "title",
-   "riskLabel",
-   "totalOdds",
-   "sportyCode",
-   "betpawaCode",
-   "price",
-   "kickoffAt",
-   "validityUntil"
-  ].forEach(id=>{
+  ["title","riskLabel","totalOdds","sportyCode","betpawaCode","price","kickoffAt","validityUntil"].forEach(id=>{
    document.getElementById(id).value="";
   });
-
   await loadMySlips();
-
  }catch(error){
-
   message.textContent=error.message;
-
  }
-
 }
 
-/* COUNTDOWN FORMAT */
-
 function formatCountdown(milliseconds){
-
  const seconds=Math.max(0,Math.floor(milliseconds/1000));
-
  const hours=Math.floor(seconds/3600);
  const minutes=Math.floor((seconds%3600)/60);
  const remaining=seconds%60;
-
  return String(hours).padStart(2,"0")+":"+
         String(minutes).padStart(2,"0")+":"+
         String(remaining).padStart(2,"0");
-
 }
 
-/* CREATE BOOKING SLIP CARD */
-
 function createSlipCard(slip,isHistory){
-
  const card=document.createElement("div");
  card.className="tip";
 
@@ -796,13 +519,11 @@ function createSlipCard(slip,isHistory){
  risk.textContent="Risk: "+(slip.riskLabel||"Not set");
 
  const codes=document.createElement("p");
-
  codes.textContent=(slip.bookingCodes||[])
   .map(x=>x.bookmaker+": "+x.code)
   .join(" | ")||"No booking codes";
 
  const kickoff=document.createElement("p");
-
  kickoff.textContent=slip.kickoffAt
   ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
   :"Kick-Off: Not set";
@@ -810,15 +531,11 @@ function createSlipCard(slip,isHistory){
  card.append(title,odds,category,price,risk,codes,kickoff);
 
  if(isHistory){
-
   const status=document.createElement("p");
   status.className="locked";
   status.textContent="HISTORY - KICK-OFF TIME REACHED";
-
   card.appendChild(status);
-
  }else{
-
   const status=document.createElement("p");
   status.className="started";
   status.textContent="ACTIVE - AUTOMATIC COUNTDOWN";
@@ -826,40 +543,28 @@ function createSlipCard(slip,isHistory){
   const countdown=document.createElement("div");
   countdown.className="countdown";
 
-  card.append(status,countdown);
+  card.append(status,countdown,createDeleteButton("slip",slip.id));
 
-  card.appendChild(createDeleteButton("slip",slip.id));
-
-  return {
+  return{
    card,
    countdown,
-   kickoffTime:slip.kickoffAt
-    ?new Date(slip.kickoffAt).getTime()
-    :null
+   kickoffTime:slip.kickoffAt?new Date(slip.kickoffAt).getTime():null
   };
-
  }
 
  card.appendChild(createDeleteButton("slip",slip.id));
-
- return {card};
-
+ return{card};
 }
 
-/* LOAD ACTIVE SLIPS AND BOOKING SLIP HISTORY */
-
 async function loadMySlips(){
-
  if(slipsLoading)return;
 
  const activeList=document.getElementById("myActiveSlips");
  const historyList=document.getElementById("mySlipHistory");
-
  if(!activeList||!historyList)return;
 
  slipsLoading=true;
  countdownRefreshInProgress=false;
-
  activeList.textContent="Loading...";
  historyList.textContent="Loading...";
 
@@ -869,7 +574,6 @@ async function loadMySlips(){
  }
 
  try{
-
   const result=await request("/api/slips/mine");
   const slips=result.slips||[];
 
@@ -877,153 +581,90 @@ async function loadMySlips(){
   historyList.innerHTML="";
 
   if(!slips.length){
-
-   activeList.innerHTML=
-    '<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
-
-   historyList.innerHTML=
-    '<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
-
+   activeList.innerHTML='<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
+   historyList.innerHTML='<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
    return;
   }
 
   const countdownEntries=[];
   const activeSlips=[];
   const historySlips=[];
-
   const now=serverNow();
 
   slips.forEach(slip=>{
-
-   const kickoffTime=slip.kickoffAt
-    ?new Date(slip.kickoffAt).getTime()
-    :null;
-
-   const hasReachedKickoff=
-    kickoffTime!==null&&
+   const kickoffTime=slip.kickoffAt?new Date(slip.kickoffAt).getTime():null;
+   const hasReachedKickoff=kickoffTime!==null&&
     (!Number.isFinite(kickoffTime)||kickoffTime<=now);
-
-   const isHistory=
-    slip.isLocked===true||
+   const isHistory=slip.isLocked===true||
     slip.isPublished===false||
     hasReachedKickoff;
 
-   if(isHistory){
-    historySlips.push(slip);
-   }else{
-    activeSlips.push(slip);
-   }
-
+   if(isHistory)historySlips.push(slip);
+   else activeSlips.push(slip);
   });
 
-  /* SHOW ACTIVE SLIPS */
-
   activeSlips.forEach(slip=>{
-
    const item=createSlipCard(slip,false);
-
    activeList.appendChild(item.card);
 
    if(item.countdown&&Number.isFinite(item.kickoffTime)){
-
     countdownEntries.push({
      kickoffTime:item.kickoffTime,
      element:item.countdown
     });
-
    }else if(item.countdown){
-
     item.countdown.textContent="KICK-OFF HAJAWEKEWA";
-
    }
-
   });
 
-  /* SHOW HISTORY SLIPS */
-
   historySlips.forEach(slip=>{
-
    const item=createSlipCard(slip,true);
-
    historyList.appendChild(item.card);
-
   });
 
   if(!activeSlips.length){
-
-   activeList.innerHTML=
-    '<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
-
+   activeList.innerHTML='<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
   }
-
   if(!historySlips.length){
-
-   historyList.innerHTML=
-    '<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
-
+   historyList.innerHTML='<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
   }
-
-  /* AUTOMATIC COUNTDOWN */
 
   const updateCountdowns=()=>{
-
    let expired=false;
 
    countdownEntries.forEach(entry=>{
-
     const remaining=entry.kickoffTime-serverNow();
-
     if(remaining<=0){
-
      entry.element.textContent="KICK-OFF IMEFIKA!";
      expired=true;
-
     }else{
-
      entry.element.textContent=formatCountdown(remaining);
-
     }
-
    });
 
    if(expired&&!countdownRefreshInProgress){
-
     countdownRefreshInProgress=true;
-
     if(countdownTimer){
      clearInterval(countdownTimer);
      countdownTimer=null;
     }
-
     loadMySlips();
-
    }
-
   };
 
   updateCountdowns();
-
   if(countdownEntries.length){
    countdownTimer=setInterval(updateCountdowns,1000);
   }
-
  }catch(error){
-
   activeList.textContent=error.message;
   historyList.textContent=error.message;
-
  }finally{
-
   slipsLoading=false;
-
  }
-
 }
 
-/* LOGOUT */
-
 function logout(){
-
  token="";
  currentUserId="";
 
@@ -1037,23 +678,19 @@ function logout(){
 
  document.getElementById("dashboard").classList.add("hidden");
  document.getElementById("loginSection").classList.remove("hidden");
-
  document.getElementById("password").value="";
  document.getElementById("loginMessage").textContent="";
-
  document.getElementById("tipPublishMessage").textContent="";
  document.getElementById("publishMessage").textContent="";
  document.getElementById("profilePictureMessage").textContent="";
-
  document.getElementById("profilePictureFile").value="";
-
- document.getElementById("myTips").textContent="Login kwanza...";
+ document.getElementById("myFreeTips").textContent="Login kwanza...";
+ document.getElementById("myPremiumTips").textContent="Login kwanza...";
+ document.getElementById("freeTipCount").textContent="0";
+ document.getElementById("premiumTipCount").textContent="0";
  document.getElementById("myActiveSlips").textContent="Login kwanza...";
  document.getElementById("mySlipHistory").textContent="Login kwanza...";
-
 }
-
 </script>
-
 </body>
 </html>
