@@ -1,80 +1,75 @@
-import { Router } from "express";
-import { z } from "zod";
-import { prisma } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+const express = require("express");
+const { z } = require("zod");
+const prisma = require("../lib/prisma");
+const { requireAuth } = require("../middleware/auth");
 
-const router = Router();
+const router = express.Router();
 
 router.use(requireAuth);
 
-// AUTOMATICALLY ARCHIVE SLIPS WHEN KICK-OFF TIME ARRIVES
+// Kuficha slips ambazo muda wa mchezo umefika.
+// isLocked inabaki kwa ajili ya premium access pekee.
 async function lockExpiredSlips() {
-  const now = new Date();
-
   await prisma.slip.updateMany({
     where: {
-      isLocked: false,
-      kickoffAt: {
-        lte: now
-      }
+      isPublished: true,
+      kickoffAt: { lte: new Date() }
     },
-    data: {
-      isLocked: true,
-      isPublished: false
-    }
+    data: { isPublished: false }
   });
 }
 
 const slipSchema = z.object({
-  title: z.string().trim().min(1).max(100),
-  riskLabel: z.string().trim().max(50).optional(),
-  totalOdds: z.coerce.number().positive(),
+  title: z.string().min(2).max(200),
+  riskLabel: z.string().max(100).optional().nullable(),
+  totalOdds: z.coerce.number().positive().max(100000),
   price: z.coerce.number().min(0).default(0),
-  validityUntil: z.coerce.date().optional(),
-  kickoffAt: z.coerce.date(),
-  category: z.enum(["FREE", "PREMIUM"]),
+  category: z.enum(["FREE", "PREMIUM"]).default("FREE"),
+  validityUntil: z.string().datetime(),
+  kickoffAt: z.string().datetime(),
   bookingCodes: z.array(
     z.object({
-      bookmaker: z.enum(["SportyBet", "BetPawa"]),
-      code: z.string().trim().min(1).max(200)
+      bookmaker: z.enum(["SPORTYBET", "BETPAWA"]),
+      code: z.string().min(1).max(200)
     })
   ).min(1)
 });
 
-// PUBLISH BOOKING SLIP
 router.post("/", async (req, res) => {
-  if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
-    return res.status(403).json({
-      error: "Only Tipsters can publish booking codes"
-    });
-  }
-
-  const parsed = slipSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: "Invalid booking slip details",
-      details: parsed.error.flatten()
-    });
-  }
-
   try {
-    const data = parsed.data;
-    const now = new Date();
-
-    if (data.kickoffAt <= now) {
-      return res.status(400).json({
-        error: "Kick-off time must be in the future"
+    if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Huruhusiwi kuchapisha booking slip."
       });
     }
 
-    const bookmakers = data.bookingCodes.map(
-      item => item.bookmaker
-    );
+    const data = slipSchema.parse(req.body);
+    const now = new Date();
+    const validityUntil = new Date(data.validityUntil);
+    const kickoffAt = new Date(data.kickoffAt);
 
+    if (validityUntil <= now) {
+      return res.status(400).json({
+        message: "Muda wa mwisho lazima uwe mbele ya muda wa sasa."
+      });
+    }
+
+    if (kickoffAt <= now) {
+      return res.status(400).json({
+        message: "Kickoff lazima uwe mbele ya muda wa sasa."
+      });
+    }
+
+    if (validityUntil > kickoffAt) {
+      return res.status(400).json({
+        message: "Muda wa mwisho wa slip hauwezi kuzidi kickoff."
+      });
+    }
+
+    const bookmakers = data.bookingCodes.map(item => item.bookmaker);
     if (new Set(bookmakers).size !== bookmakers.length) {
       return res.status(400).json({
-        error: "Each bookmaker can only have one code per slip"
+        message: "Bookmaker mmoja amewekwa zaidi ya mara moja."
       });
     }
 
@@ -82,321 +77,273 @@ router.post("/", async (req, res) => {
       data: {
         tipsterId: req.user.id,
         title: data.title,
-        riskLabel: data.riskLabel,
+        riskLabel: data.riskLabel || null,
         totalOdds: data.totalOdds,
         price: data.price,
-        validityUntil: data.validityUntil,
-        kickoffAt: data.kickoffAt,
         category: data.category,
+        validityUntil,
+        kickoffAt,
         isPublished: true,
         isLocked: false,
         bookingCodes: {
-          create: data.bookingCodes.map(item => ({
-            bookmaker:
-              item.bookmaker === "SportyBet"
-                ? "SPORTYBET"
-                : "BETPAWA",
-            code: item.code
-          }))
+          create: data.bookingCodes
         }
       },
-      include: {
-        bookingCodes: true
-      }
+      include: { bookingCodes: true }
     });
 
-    return res.status(201).json({
-      message: "Betslip published successfully",
-      slip
-    });
+    res.status(201).json(slip);
   } catch (error) {
-    console.error("Publish slip error:", error);
-
-    return res.status(500).json({
-      error: "Could not publish betslip"
-    });
-  }
-});
-
-// DELETE OWN BOOKING SLIP
-router.delete("/:id", async (req, res) => {
-  if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
-    return res.status(403).json({
-      error: "Only Tipsters and Admin can delete booking slips"
-    });
-  }
-
-  try {
-    const slip = await prisma.slip.findFirst({
-      where: {
-        id: req.params.id,
-        tipsterId: req.user.id
-      },
-      select: {
-        id: true
-      }
-    });
-
-    if (!slip) {
-      return res.status(404).json({
-        error: "Booking slip not found or you are not allowed to delete it"
-      });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      // Delete related booking codes first
-      await tx.slip.update({
-        where: {
-          id: slip.id
-        },
-        data: {
-          bookingCodes: {
-            deleteMany: {}
-          }
-        }
-      });
-
-      // Then delete the booking slip
-      await tx.slip.delete({
-        where: {
-          id: slip.id
-        }
-      });
-    });
-
-    return res.json({
-      message: "Booking slip deleted successfully"
-    });
-  } catch (error) {
-    console.error("Delete slip error:", error);
-
-    return res.status(500).json({
-      error: "Could not delete booking slip"
-    });
-  }
-});
-
-// START KICK-OFF ENDPOINT KEPT FOR COMPATIBILITY
-router.patch("/:id/start-kickoff", async (req, res) => {
-  try {
-    const slip = await prisma.slip.findUnique({
-      where: {
-        id: req.params.id
-      }
-    });
-
-    if (!slip) {
-      return res.status(404).json({
-        error: "Betslip not found"
-      });
-    }
-
-    if (slip.tipsterId !== req.user.id) {
-      return res.status(403).json({
-        error: "You can only start your own betslips"
-      });
-    }
-
-    if (slip.isLocked) {
-      return res.status(403).json({
-        error: "This betslip is already locked"
-      });
-    }
-
-    if (slip.kickoffStartedAt) {
-      return res.status(409).json({
-        error: "Kick-off countdown has already started"
-      });
-    }
-
-    if (!slip.kickoffAt) {
+    if (error instanceof z.ZodError) {
       return res.status(400).json({
-        error: "Please set the kick-off date and time first"
+        message: "Taarifa za slip hazijakamilika au si sahihi.",
+        errors: error.errors
       });
     }
 
-    const now = new Date();
-
-    if (slip.kickoffAt <= now) {
-      return res.status(400).json({
-        error: "Kick-off time must be in the future"
-      });
-    }
-
-    const updated = await prisma.slip.updateMany({
-      where: {
-        id: slip.id,
-        tipsterId: req.user.id,
-        kickoffStartedAt: null,
-        isLocked: false,
-        kickoffAt: {
-          gt: now
-        }
-      },
-      data: {
-        kickoffStartedAt: now
-      }
-    });
-
-    if (updated.count !== 1) {
-      return res.status(409).json({
-        error: "Could not start countdown. Please refresh and try again"
-      });
-    }
-
-    const startedSlip = await prisma.slip.findUnique({
-      where: {
-        id: slip.id
-      },
-      include: {
-        bookingCodes: true
-      }
-    });
-
-    return res.json({
-      message: "Kick-off countdown started successfully",
-      slip: startedSlip,
-      serverTime: now.toISOString()
-    });
-  } catch (error) {
-    console.error("Start kickoff error:", error);
-
-    return res.status(500).json({
-      error: "Could not start kick-off countdown"
+    console.error(error);
+    res.status(500).json({
+      message: "Imeshindikana kuchapisha slip."
     });
   }
 });
 
-// TIPSTER HISTORY AND ACTIVE SLIPS
+// Slips za Tipster aliyeingia
 router.get("/mine", async (req, res) => {
-  console.log("[SLIPS-MINE] Loading slips for:", req.user.id);
-
   try {
     const slips = await prisma.slip.findMany({
-      where: {
-        tipsterId: req.user.id
-      },
-      include: {
-        bookingCodes: true
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
+      where: { tipsterId: req.user.id },
+      include: { bookingCodes: true },
+      orderBy: { createdAt: "desc" }
     });
 
-    console.log("[SLIPS-MINE] Successfully loaded:", slips.length);
-
-    return res.status(200).json({ slips });
+    res.json(slips);
   } catch (error) {
-    console.error("[SLIPS-MINE] Database error:", error);
-
-    return res.status(500).json({
-      error: "Could not load your betslips",
-      details: error.message
-    });
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kupata slips zako." });
   }
 });
 
-// CUSTOMER LIST: ONLY ACTIVE PUBLISHED SLIPS
+// Slips zote zinazoonekana kwa wateja
 router.get("/", async (req, res) => {
   try {
     await lockExpiredSlips();
 
-    const where = {
-      isPublished: true,
-      isLocked: false
-    };
-
     const slips = await prisma.slip.findMany({
-      where,
+      where: {
+        isPublished: true,
+        isLocked: false
+      },
       include: {
         tipster: {
-          select: {
-            id: true,
-            username: true,
-            profileImage: true
-          }
+          select: { id: true, username: true }
         },
         bookingCodes: true
       },
-      orderBy: {
-        createdAt: "desc"
-      }
+      orderBy: { createdAt: "desc" },
+      take: 100
     });
 
-    // NEVER EXPOSE PREMIUM CODES TO CUSTOMERS
-    const safeSlips = slips.map(slip => {
-      if (
-        req.user.role === "CUSTOMER" &&
-        slip.category === "PREMIUM"
-      ) {
-        return {
-          ...slip,
-          bookingCodes: [],
-          isLocked: true
-        };
-      }
+    const results = slips.map(slip => {
+      const isCustomer = req.user.role === "CUSTOMER";
+      const isPremium = slip.category === "PREMIUM";
 
-      return slip;
+      return {
+        ...slip,
+        isLocked: isCustomer && isPremium,
+        bookingCodes:
+          isCustomer && isPremium ? [] : slip.bookingCodes
+      };
     });
 
-    return res.json({
-      slips: safeSlips
-    });
+    res.json(results);
   } catch (error) {
-    console.error("Load slips error:", error);
-
-    return res.status(500).json({
-      error: "Could not load betslips"
-    });
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kupata slips." });
   }
 });
 
-// VIEW ONE SLIP
+// Slip moja
 router.get("/:id", async (req, res) => {
   try {
     await lockExpiredSlips();
 
-    const slip = await prisma.slip.findUnique({
+    const slip = await prisma.slip.findFirst({
       where: {
-        id: req.params.id
+        id: req.params.id,
+        isPublished: true,
+        isLocked: false
       },
       include: {
         tipster: {
-          select: {
-            id: true,
-            username: true,
-            profileImage: true
-          }
+          select: { id: true, username: true }
         },
         bookingCodes: true
       }
     });
 
-    if (!slip || !slip.isPublished || slip.isLocked) {
-      return res.status(404).json({
-        error: "Betslip not found"
-      });
+    if (!slip) {
+      return res.status(404).json({ message: "Slip haijapatikana." });
     }
 
-    // CUSTOMERS CANNOT ACCESS PREMIUM CODES
     if (
       req.user.role === "CUSTOMER" &&
       slip.category === "PREMIUM"
     ) {
       return res.status(403).json({
-        error: "Payment required to view premium booking codes"
+        message: "Slip hii ni PREMIUM. Unahitaji access kuiona."
       });
     }
 
-    return res.json({ slip });
+    res.json(slip);
   } catch (error) {
-    console.error("View slip error:", error);
-
-    return res.status(500).json({
-      error: "Could not load betslip"
-    });
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kupata slip." });
   }
 });
 
-export default router;
+// Kuanza kickoff
+router.patch("/:id/start-kickoff", async (req, res) => {
+  try {
+    const slip = await prisma.slip.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!slip) {
+      return res.status(404).json({ message: "Slip haijapatikana." });
+    }
+
+    if (
+      req.user.role !== "SUPER_ADMIN" &&
+      slip.tipsterId !== req.user.id
+    ) {
+      return res.status(403).json({ message: "Hii si slip yako." });
+    }
+
+    if (slip.kickoffStartedAt) {
+      return res.status(400).json({
+        message: "Kickoff tayari imeanzishwa."
+      });
+    }
+
+    if (!slip.kickoffAt || new Date(slip.kickoffAt) <= new Date()) {
+      return res.status(400).json({
+        message: "Kickoff time imefika au imepita."
+      });
+    }
+
+    const updated = await prisma.slip.update({
+      where: { id: slip.id },
+      data: { kickoffStartedAt: new Date() }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kuanzisha kickoff." });
+  }
+});
+
+// Kuweka matokeo baada ya expiry
+router.patch("/:id/result", async (req, res) => {
+  try {
+    if (req.user.role !== "TIPSTER") {
+      return res.status(403).json({
+        message: "Tipster pekee ndiye anayeruhusiwa kuweka matokeo."
+      });
+    }
+
+    const schema = z.object({
+      result: z.enum(["WON", "LOST"])
+    });
+
+    const { result } = schema.parse(req.body);
+
+    const updated = await prisma.slip.updateMany({
+      where: {
+        id: req.params.id,
+        tipsterId: req.user.id,
+        result: "PENDING",
+        validityUntil: { lte: new Date() }
+      },
+      data: { result }
+    });
+
+    if (updated.count === 0) {
+      const slip = await prisma.slip.findUnique({
+        where: { id: req.params.id }
+      });
+
+      if (!slip) {
+        return res.status(404).json({ message: "Slip haijapatikana." });
+      }
+
+      if (slip.tipsterId !== req.user.id) {
+        return res.status(403).json({ message: "Hii si slip yako." });
+      }
+
+      if (slip.result !== "PENDING") {
+        return res.status(400).json({
+          message: "Matokeo tayari yamewekwa na hayawezi kubadilishwa."
+        });
+      }
+
+      return res.status(400).json({
+        message: "Huwezi kuweka matokeo kabla muda wa slip kuisha."
+      });
+    }
+
+    const updatedSlip = await prisma.slip.findUnique({
+      where: { id: req.params.id },
+      include: { bookingCodes: true }
+    });
+
+    res.json({
+      message: "Matokeo ya slip yamehifadhiwa.",
+      slip: updatedSlip
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Chagua WON au LOST pekee." });
+    }
+
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kuhifadhi matokeo." });
+  }
+});
+
+// Kufuta slip
+router.delete("/:id", async (req, res) => {
+  try {
+    const slip = await prisma.slip.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!slip) {
+      return res.status(404).json({ message: "Slip haijapatikana." });
+    }
+
+    if (
+      req.user.role !== "SUPER_ADMIN" &&
+      slip.tipsterId !== req.user.id
+    ) {
+      return res.status(403).json({ message: "Hii si slip yako." });
+    }
+
+    await prisma.$transaction([
+      prisma.bookingCode.deleteMany({
+        where: { slipId: slip.id }
+      }),
+      prisma.slip.delete({
+        where: { id: slip.id }
+      })
+    ]);
+
+    res.json({ message: "Slip imefutwa." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kufuta slip." });
+  }
+});
+
+module.exports = router;
