@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -6,7 +5,6 @@ import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 
 // UPDATE OWN PROFILE PICTURE
-// Login is required for this action only.
 router.patch("/me/profile-image", requireAuth, async (req, res) => {
   try {
     if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
@@ -52,7 +50,6 @@ router.patch("/me/profile-image", requireAuth, async (req, res) => {
 });
 
 // GET ALL TIPSTERS
-// Login is required because this endpoint checks who the user follows.
 router.get("/", requireAuth, async (req, res) => {
   try {
     const tipsters = await prisma.user.findMany({
@@ -125,9 +122,11 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 // GET SINGLE TIPSTER PROFILE
-// Public endpoint: customers do not need to log in to view a profile.
+// Public endpoint: customers do not need to log in.
 router.get("/:id", async (req, res) => {
   try {
+    const now = new Date();
+
     const tipster = await prisma.user.findFirst({
       where: {
         id: req.params.id,
@@ -159,7 +158,11 @@ router.get("/:id", async (req, res) => {
         slips: {
           where: {
             isPublished: true,
-            isLocked: false
+            isLocked: false,
+            OR: [
+              { kickoffAt: null },
+              { kickoffAt: { gt: now } }
+            ]
           },
           orderBy: {
             createdAt: "desc"
@@ -214,8 +217,7 @@ router.get("/:id", async (req, res) => {
 
     const decided = wins + losses;
 
-    // Public visitors are treated as customers.
-    // Premium match predictions and odds must remain hidden.
+    // Premium match predictions and odds remain hidden.
     const visibleTips = tipster.tips.map(tip => {
       if (tip.category === "PREMIUM") {
         return {
@@ -237,8 +239,7 @@ router.get("/:id", async (req, res) => {
       };
     });
 
-    // FREE booking codes are visible.
-    // PREMIUM booking codes are never sent to public visitors.
+    // Premium booking codes are never sent to public visitors.
     const visibleSlips = tipster.slips.map(slip => {
       if (slip.category === "PREMIUM") {
         return {
