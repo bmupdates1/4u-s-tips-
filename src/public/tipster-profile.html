@@ -1,10 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="sw">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>4U'S TIPS - Tipster Profile</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#071b15;color:#fff;font-family:Arial,sans-serif}
@@ -21,7 +21,7 @@ main{max-width:750px;margin:auto;padding:16px}
 .free-title{color:#35d39a}
 .premium-title{color:#d4af37}
 .locked{color:#ff7777;font-weight:bold}
-.countdown{font-size:21px;font-weight:bold;color:#d4af37;margin:10px 0}
+.countdown{font-size:18px;font-weight:bold;color:#d4af37;margin:10px 0}
 .tip-group{margin:12px 0;padding:12px;border:1px solid #315b49;border-radius:10px;background:#092f25}
 .tip-group summary{cursor:pointer;font-weight:bold;padding:8px;user-select:none}
 .tip-group summary::marker{color:#d4af37}
@@ -33,6 +33,7 @@ main{max-width:750px;margin:auto;padding:16px}
 a.back{display:inline-block;color:#d4af37;text-decoration:none;margin-bottom:15px}
 </style>
 </head>
+
 <body>
 <header>
 <h1>4U'S TIPS ⚽</h1>
@@ -99,21 +100,73 @@ async function getJSON(path){
  const response=await fetch(API+path);
  const text=await response.text();
  let data={};
- try{data=text?JSON.parse(text):{};}
- catch{throw new Error("Server imerudisha taarifa zisizo sahihi.");}
- if(!response.ok)throw new Error(data.error||data.message||"Imeshindikana kupakia taarifa.");
+
+ try{
+  data=text?JSON.parse(text):{};
+ }catch{
+  throw new Error("Server imerudisha taarifa zisizo sahihi.");
+ }
+
+ if(!response.ok){
+  throw new Error(data.error||data.message||"Imeshindikana kupakia taarifa.");
+ }
+
  return data;
 }
 
 function formatDate(value){
  if(!value)return "Not set";
+
  const date=new Date(value);
+
  if(isNaN(date.getTime()))return "Not set";
+
  return date.toLocaleString();
+}
+
+// COUNTDOWN YA BOOKING CODES
+function updateBookingCountdowns(){
+ document.querySelectorAll(".countdown").forEach(item=>{
+  const kickoff=item.dataset.kickoff;
+
+  if(!kickoff){
+   item.textContent="KICK-OFF HAJAWEKEWA";
+   return;
+  }
+
+  const difference=new Date(kickoff).getTime()-Date.now();
+
+  if(difference<=0){
+   const card=item.closest(".booking-code");
+   const target=card ? card.parentElement : null;
+
+   if(card)card.remove();
+
+   if(target && !target.querySelector(".booking-code")){
+    target.textContent="Hakuna Booking Codes katika kundi hili kwa sasa.";
+    target.className="empty";
+   }
+
+   return;
+  }
+
+  const days=Math.floor(difference/86400000);
+  const hours=Math.floor((difference%86400000)/3600000);
+  const minutes=Math.floor((difference%3600000)/60000);
+  const seconds=Math.floor((difference%60000)/1000);
+
+  item.textContent=
+   "⏳ Muda uliobaki: "+
+   days+"d "+
+   hours+"h "+
+   minutes+"m "+
+   seconds+"s";
+ });
 }
 
 function renderBookingCodes(slips,category,target){
  target.innerHTML="";
+
  const matching=slips.filter(s=>s.category===category);
 
  if(!matching.length){
@@ -121,6 +174,7 @@ function renderBookingCodes(slips,category,target){
   target.className="empty";
   return;
  }
+
  target.className="";
 
  matching.forEach(slip=>{
@@ -128,33 +182,63 @@ function renderBookingCodes(slips,category,target){
   card.className="booking-code";
 
   addText(card,"h3",safeText(slip.title,"Booking Slip"));
-  addText(card,"p","Total Odds: "+safeText(slip.totalOdds,"Not set"));
-  addText(card,"p","Kick-Off: "+formatDate(slip.kickoffAt));
+
+  addText(
+   card,
+   "p",
+   "Total Odds: "+safeText(slip.totalOdds,"Not set")
+  );
+
+  addText(
+   card,
+   "p",
+   "Kick-Off: "+formatDate(slip.kickoffAt)
+  );
+
+  const countdown=document.createElement("div");
+  countdown.className="countdown";
+  countdown.dataset.kickoff=slip.kickoffAt || "";
+  card.appendChild(countdown);
 
   if(category==="PREMIUM"){
    const locked=document.createElement("div");
    locked.className="premium-lock";
+
    addText(locked,"p","🔒 PREMIUM BOOKING CODE");
-   addText(locked,"p","Booking code hii ni kwa wateja wa Premium pekee.");
+   addText(
+    locked,
+    "p",
+    "Booking code hii ni kwa wateja wa Premium pekee."
+   );
+
    card.appendChild(locked);
+
   }else{
    const codes=slip.bookingCodes||[];
+
    if(codes.length){
     codes.forEach(code=>{
      const row=document.createElement("p");
+
      row.textContent=safeText(code.bookmaker,"Bookmaker")+": ";
+
      const value=document.createElement("span");
      value.className="code-value";
      value.textContent=safeText(code.code,"Code haipo");
+
      row.appendChild(value);
      card.appendChild(row);
     });
+
    }else{
     addText(card,"p","Booking code haijawekwa.");
    }
   }
+
   target.appendChild(card);
  });
+
+ updateBookingCountdowns();
 }
 
 function renderMatchTips(tips){
@@ -166,22 +250,28 @@ function renderMatchTips(tips){
 
  const freeTarget=element("freeTips");
  const premiumTarget=element("premiumTips");
+
  freeTarget.innerHTML="";
  premiumTarget.innerHTML="";
 
  if(!free.length){
   freeTarget.textContent="Hakuna FREE TIPS kwa sasa.";
   freeTarget.className="empty";
+
  }else{
   freeTarget.className="";
+
   free.forEach(tip=>{
    const card=document.createElement("div");
    card.className="tip";
+
    addText(card,"h3",safeText(tip.matchName,"Match"));
    addText(card,"p","Prediction: "+safeText(tip.prediction,"Not set"));
    addText(card,"p","Odds: "+safeText(tip.odds,"Not set"));
    addText(card,"p","Kick-Off: "+formatDate(tip.kickoffAt));
+
    card.appendChild(document.createTextNode("🟢 FREE TIP"));
+
    freeTarget.appendChild(card);
   });
  }
@@ -189,16 +279,26 @@ function renderMatchTips(tips){
  if(!premium.length){
   premiumTarget.textContent="Hakuna PREMIUM TIPS kwa sasa.";
   premiumTarget.className="empty";
+
  }else{
   premiumTarget.className="";
+
   premium.forEach(tip=>{
    const card=document.createElement("div");
    card.className="tip";
+
    addText(card,"h3",safeText(tip.matchName,"Match"));
+
    const lock=document.createElement("div");
    lock.className="premium-lock";
+
    addText(lock,"p","🔒 PREMIUM TIP LOCKED");
-   addText(lock,"p","Prediction na Odds zimefungwa. Jiunge na Premium ili kupata taarifa hizi.");
+   addText(
+    lock,
+    "p",
+    "Prediction na Odds zimefungwa. Jiunge na Premium ili kupata taarifa hizi."
+   );
+
    card.appendChild(lock);
    premiumTarget.appendChild(card);
   });
@@ -213,11 +313,17 @@ async function loadProfile(){
  }
 
  try{
-  const result=await getJSON("/api/tipsters/"+encodeURIComponent(tipsterId));
+  const result=await getJSON(
+   "/api/tipsters/"+encodeURIComponent(tipsterId)
+  );
+
   const tipster=result.tipster||result;
 
-  element("tipsterName").textContent=safeText(tipster.username,"4U'S TIPS Tipster");
-  element("tipsterDescription").textContent=safeText(tipster.bio,"4U'S TIPS Tipster");
+  element("tipsterName").textContent=
+   safeText(tipster.username,"4U'S TIPS Tipster");
+
+  element("tipsterDescription").textContent=
+   safeText(tipster.bio,"4U'S TIPS Tipster");
 
   if(tipster.profileImage){
    element("profileImage").src=tipster.profileImage;
@@ -230,18 +336,32 @@ async function loadProfile(){
    tips.length+" Match Tips";
 
   renderMatchTips(tips);
-  renderBookingCodes(slips,"FREE",element("freeBookingCodes"));
-  renderBookingCodes(slips,"PREMIUM",element("premiumBookingCodes"));
+
+  renderBookingCodes(
+   slips,
+   "FREE",
+   element("freeBookingCodes")
+  );
+
+  renderBookingCodes(
+   slips,
+   "PREMIUM",
+   element("premiumBookingCodes")
+  );
 
  }catch(error){
   element("tipsterName").textContent="Imeshindikana kupakia Profile";
   element("tipsterDescription").textContent=error.message;
+
   element("freeTips").textContent=error.message;
   element("premiumTips").textContent=error.message;
   element("freeBookingCodes").textContent=error.message;
   element("premiumBookingCodes").textContent=error.message;
  }
 }
+
+// Sasisha countdown kila sekunde.
+setInterval(updateBookingCountdowns,1000);
 
 loadProfile();
 </script>
