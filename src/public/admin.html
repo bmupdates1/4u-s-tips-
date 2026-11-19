@@ -1,190 +1,456 @@
-function renderUsers() {
-  const list = document.getElementById("usersList");
 
-  const q = document.getElementById("searchInput")
-    .value.trim().toLowerCase();
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>4U'S TIPS | Super Admin</title>
+  <style>
+    :root {
+      --bg:#071911;
+      --panel:#10271e;
+      --panel2:#153328;
+      --line:#285340;
+      --gold:#e0bd55;
+      --text:#f5f7f5;
+      --muted:#a9bdb1;
+      --red:#8b3535;
+      --green:#286342;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Arial,sans-serif;
+    }
+    header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:14px;
+      padding:16px 20px;
+      background:#0b241a;
+      border-bottom:1px solid var(--line);
+      position:sticky;
+      top:0;
+      z-index:5;
+    }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .logo {
+      width:43px; height:43px; border-radius:13px;
+      background:linear-gradient(135deg,#e8ca70,#a98224);
+      display:grid; place-items:center; color:#122218;
+      font-weight:900; font-size:18px;
+    }
+    h1 { font-size:19px; margin:0; color:var(--gold); }
+    header p { margin:4px 0 0; color:var(--muted); font-size:11px; letter-spacing:1.4px; }
+    main { max-width:1100px; margin:auto; padding:22px 16px 45px; }
+    .hidden { display:none !important; }
+    .panel,.stat {
+      background:var(--panel); border:1px solid var(--line);
+      border-radius:15px; padding:18px; margin:16px 0;
+    }
+    .login { max-width:420px; margin:8vh auto; }
+    .eyebrow { color:var(--gold); font-size:11px; letter-spacing:1.8px; font-weight:bold; }
+    h2 { color:var(--gold); margin:8px 0 14px; }
+    h3 { margin:0; font-size:17px; }
+    .sub { color:var(--muted); font-size:13px; margin:6px 0 0; line-height:1.5; }
+    label { display:block; color:var(--muted); margin:13px 0 6px; font-size:13px; }
+    input,select,button { font:inherit; }
+    input,select {
+      width:100%; padding:12px; border:1px solid var(--line);
+      border-radius:9px; background:#091c14; color:var(--text); margin:6px 0;
+    }
+    button {
+      border:0; border-radius:9px; padding:11px 14px;
+      background:var(--gold); color:#172319; font-weight:bold; cursor:pointer;
+    }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    button.secondary { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
+    button.logout { background:var(--red); color:#fff; border:1px solid #a74c4c; }
+    .login button { width:100%; margin-top:14px; }
+    .top-actions { display:flex; gap:8px; }
+    .top-actions button { width:auto; }
+    .welcome { margin:8px 0 18px; }
+    .welcome h2 { font-size:25px; margin:7px 0; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:18px 0; }
+    .stat { margin:0; text-align:center; }
+    .stat span { color:var(--muted); font-size:13px; }
+    .stat strong { display:block; font-size:28px; color:var(--gold); margin-top:8px; }
+    .panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+    .toolbar { display:flex; gap:9px; flex-wrap:wrap; margin-bottom:14px; }
+    .toolbar input { flex:2; min-width:180px; }
+    .toolbar select { flex:1; min-width:145px; }
+    .user-list { display:grid; gap:10px; }
+    .user-card {
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
+      background:#0b2017; border:1px solid var(--line); border-radius:12px;
+      padding:14px; min-width:0;
+    }
+    .user-main { display:flex; align-items:center; gap:12px; min-width:0; }
+    .avatar {
+      width:42px; height:42px; border-radius:50%; background:#244a37;
+      display:grid; place-items:center; color:var(--gold); font-weight:bold; flex:none;
+    }
+    .user-info { min-width:0; }
+    .user-info strong { display:block; overflow-wrap:anywhere; }
+    .user-info small { display:block; color:var(--muted); margin-top:5px; overflow-wrap:anywhere; }
+    .pill { display:inline-block; font-size:10px; letter-spacing:.6px; border-radius:30px; padding:5px 8px; background:#244a37; color:#b8f0d1; margin:6px 4px 0 0; }
+    .pill.role { background:#3c3520; color:#f2d987; }
+    .user-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+    .user-actions select { width:auto; min-width:115px; padding:9px; margin:0; }
+    .small-btn { padding:9px 11px; font-size:12px; }
+    .status-btn { color:#fff; }
+    .message { min-height:20px; color:var(--gold); font-size:13px; }
+    .empty { color:var(--muted); padding:20px; text-align:center; border:1px dashed var(--line); border-radius:10px; }
+    footer { text-align:center; color:#6f8b7b; font-size:11px; padding:22px; }
+    @media(max-width:680px) {
+      header { padding:13px; }
+      main { padding:15px 12px 35px; }
+      .stats { grid-template-columns:1fr 1fr; }
+      .user-card { align-items:flex-start; flex-direction:column; }
+      .user-actions { justify-content:flex-start; width:100%; }
+      .user-actions select { flex:1; }
+      .welcome h2 { font-size:21px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">4U</div>
+      <div>
+        <h1>4U'S TIPS</h1>
+        <p>SUPER ADMIN CONTROL CENTER</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="logoutBtn" class="logout hidden" onclick="logout()">Logout</button>
+    </div>
+  </header>
 
-  const role = document.getElementById("filterRole").value;
-  const status = document.getElementById("filterStatus").value;
+  <main>
+    <section id="loginPanel" class="panel login">
+      <div class="eyebrow">SECURE ACCESS</div>
+      <h2>Super Admin Login</h2>
+      <form onsubmit="event.preventDefault(); loginAdmin();">
+        <label for="username">Username</label>
+        <input id="username" autocomplete="username" placeholder="Ingiza username" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Ingiza password" required>
+        <button id="loginBtn" type="submit">Ingia kwenye Dashboard</button>
+      </form>
+      <p id="loginMessage" class="message" role="status"></p>
+    </section>
 
-  const users = allUsers.filter(user => {
-    const matchesRole = role === "ALL" || user.role === role;
+    <section id="dashboard" class="hidden">
+      <div class="welcome">
+        <div class="eyebrow">SYSTEM MANAGEMENT</div>
+        <h2>Karibu, Super Admin 👑</h2>
+        <p class="sub">Simamia akaunti za Customers na Tipsters pamoja na usalama wa mfumo.</p>
+        <div class="top-actions" style="margin-top:12px">
+          <button class="secondary" onclick="refreshDashboard()">Refresh Dashboard</button>
+        </div>
+        <p id="dashboardMessage" class="message" role="status"></p>
+      </div>
 
-    const matchesStatus =
-      status === "ALL" ||
-      (status === "ACTIVE" && user.isActive) ||
-      (status === "INACTIVE" && !user.isActive);
+      <div class="stats">
+        <div class="stat"><span>Jumla ya Watumiaji</span><strong id="usersCount">0</strong></div>
+        <div class="stat"><span>Tipsters</span><strong id="tipstersCount">0</strong></div>
+        <div class="stat"><span>Akaunti Zinazotumika</span><strong id="activeCount">0</strong></div>
+      </div>
 
-    const matchesSearch =
-      (user.username || "").toLowerCase().includes(q) ||
-      (user.email || "").toLowerCase().includes(q);
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>Usimamizi wa Akaunti</h3>
+            <p class="sub">Tafuta watumiaji, badilisha role, washa au simamisha akaunti, na reset password.</p>
+          </div>
+          <button class="secondary small-btn" onclick="loadUsers()">Refresh Users</button>
+        </div>
+        <div class="toolbar">
+          <input id="searchInput" placeholder="Tafuta username au email..." oninput="renderUsers()">
+          <select id="filterRole" onchange="renderUsers()">
+            <option value="ALL">Roles zote</option>
+            <option value="TIPSTER">Tipsters</option>
+            <option value="CUSTOMER">Customers</option>
+            <option value="SUPER_ADMIN">Super Admin</option>
+          </select>
+          <select id="filterStatus" onchange="renderUsers()">
+            <option value="ALL">Status zote</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+        <div id="usersList" class="user-list"><div class="empty">Inapakia watumiaji...</div></div>
+      </section>
 
-    return matchesRole && matchesStatus && matchesSearch;
-  });
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>Majukumu ya Super Admin</h3>
+            <p class="sub">Super Admin anasimamia mfumo pekee.</p>
+          </div>
+        </div>
+        <p class="sub">• Kusimamia akaunti za Tipsters na Customers</p>
+        <p class="sub">• Kubadilisha Customer kuwa Tipster au kinyume chake</p>
+        <p class="sub">• Kuangalia takwimu za watumiaji</p>
+        <p class="sub">• Kusimamia usalama wa mfumo</p>
+        <p class="sub" style="color:#e7c96f">Uchapishaji wa Match Tips na Booking Codes unabaki kwenye Tipster Dashboard.</p>
+      </section>
+    </section>
+  </main>
 
-  list.innerHTML = "";
+  <footer>4U'S TIPS · PREDICT SMARTER</footer>
 
-  if (!users.length) {
-    list.innerHTML =
-      '<div class="empty">Hakuna akaunti zilizopatikana.</div>';
-    return;
-  }
+  <script>
+    const API = window.location.origin;
+    let adminToken = "";
+    let allUsers = [];
 
-  users.forEach(user => {
-    const card = document.createElement("article");
-    card.className = "user-card";
-
-    const main = document.createElement("div");
-    main.className = "user-main";
-
-    const avatar = document.createElement("div");
-    avatar.className = "avatar";
-    avatar.textContent =
-      (user.username || "U").slice(0, 1).toUpperCase();
-
-    const info = document.createElement("div");
-    info.className = "user-info";
-
-    const name = document.createElement("strong");
-    name.textContent = user.username;
-
-    const statusPill = document.createElement("span");
-    statusPill.className = "pill";
-    statusPill.textContent =
-      user.isActive ? "ACTIVE" : "INACTIVE";
-
-    const rolePill = document.createElement("span");
-    rolePill.className = "pill role";
-    rolePill.textContent = user.role;
-
-    const email = document.createElement("small");
-    email.textContent = user.email || "Email haipo";
-
-    info.append(name, statusPill, rolePill, email);
-    main.append(avatar, info);
-    card.append(main);
-
-    const actions = document.createElement("div");
-    actions.className = "user-actions";
-
-    if (user.role !== "SUPER_ADMIN") {
-      const select = document.createElement("select");
-
-      ["CUSTOMER", "TIPSTER"].forEach(r => {
-        const option = document.createElement("option");
-        option.value = r;
-        option.textContent = r;
-        option.selected = user.role === r;
-        select.append(option);
+    async function requestJSON(path, options = {}) {
+      const response = await fetch(API + path, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminToken ? { "Authorization": "Bearer " + adminToken } : {}),
+          ...(options.headers || {})
+        }
       });
 
-      const save = document.createElement("button");
-      save.className = "secondary small-btn";
-      save.textContent = "Hifadhi Role";
-      save.onclick = () => changeRole(user.id, select.value);
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Server haikurudisha majibu sahihi. Jaribu tena.");
+      }
 
-      const statusBtn = document.createElement("button");
-      statusBtn.className = "small-btn";
-      statusBtn.textContent =
-        user.isActive ? "Simamisha" : "Washa Akaunti";
-
-      statusBtn.style.background =
-        user.isActive ? "#542b2b" : "#286342";
-      statusBtn.style.color = "#fff";
-
-      statusBtn.onclick = () =>
-        changeStatus(user.id, !user.isActive);
-
-      const passwordBtn = document.createElement("button");
-      passwordBtn.className = "secondary small-btn";
-      passwordBtn.textContent = "Badili Password";
-      passwordBtn.onclick = () => resetPassword(user.id);
-
-      actions.append(
-        select,
-        save,
-        statusBtn,
-        passwordBtn
-      );
-
-    } else {
-      const own = document.createElement("small");
-      own.style.color = "var(--muted)";
-      own.textContent = "Akaunti ya msimamizi mkuu";
-      actions.append(own);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Ombi halikufanikiwa: " + response.status);
+      }
+      return data;
     }
 
-    card.append(actions);
-    list.append(card);
-  });
-}
+    async function loginAdmin() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const message = document.getElementById("loginMessage");
+      const loginBtn = document.getElementById("loginBtn");
 
-
-// ACTIVATE / DEACTIVATE ACCOUNT
-async function changeStatus(id, isActive) {
-  const action = isActive ? "kuwasha" : "kusimamisha";
-
-  if (!confirm(`Unathibitisha ${action} akaunti hii?`)) {
-    return;
-  }
-
-  try {
-    await requestJSON(
-      "/api/users/" + encodeURIComponent(id) + "/status",
-      {
-        method: "PATCH",
-        body: JSON.stringify({ isActive })
+      if (!username || !password) {
+        message.textContent = "Jaza username na password kwanza.";
+        return;
       }
-    );
 
-    document.getElementById("dashboardMessage").textContent =
-      "Hali ya akaunti imebadilishwa.";
+      loginBtn.disabled = true;
+      message.textContent = "Inakagua taarifa...";
 
-    await loadUsers();
+      try {
+        const result = await requestJSON("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ username, password })
+        });
+        adminToken = result.token;
 
-  } catch (error) {
-    alert(error.message);
-  }
-}
+        const me = await requestJSON("/api/auth/me");
+        if (!me.user || me.user.role !== "SUPER_ADMIN") {
+          adminToken = "";
+          throw new Error("Akaunti hii si ya Super Admin.");
+        }
 
-
-// RESET USER PASSWORD
-async function resetPassword(id) {
-  const newPassword = prompt(
-    "Ingiza password mpya yenye herufi 8 au zaidi:"
-  );
-
-  if (newPassword === null) {
-    return;
-  }
-
-  if (newPassword.length < 8) {
-    alert("Password lazima iwe na herufi 8 au zaidi.");
-    return;
-  }
-
-  if (newPassword.length > 128) {
-    alert("Password imezidi urefu unaoruhusiwa.");
-    return;
-  }
-
-  if (!confirm("Unathibitisha kubadilisha password ya akaunti hii?")) {
-    return;
-  }
-
-  try {
-    await requestJSON(
-      "/api/users/" + encodeURIComponent(id) + "/password",
-      {
-        method: "PATCH",
-        body: JSON.stringify({ newPassword })
+        document.getElementById("loginPanel").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
+        message.textContent = "";
+        await refreshDashboard();
+      } catch (error) {
+        adminToken = "";
+        message.textContent = error.message;
+      } finally {
+        loginBtn.disabled = false;
       }
-    );
+    }
 
-    document.getElementById("dashboardMessage").textContent =
-      "Password imebadilishwa kikamilifu.";
+    function logout() {
+      adminToken = "";
+      allUsers = [];
+      document.getElementById("dashboard").classList.add("hidden");
+      document.getElementById("logoutBtn").classList.add("hidden");
+      document.getElementById("loginPanel").classList.remove("hidden");
+      document.getElementById("password").value = "";
+      document.getElementById("loginMessage").textContent = "Umetoka kwenye akaunti.";
+      document.getElementById("usersList").innerHTML = '<div class="empty">Ingia tena kuona watumiaji.</div>';
+    }
 
-  } catch (error) {
-    alert(error.message);
-  }
-}
+    async function refreshDashboard() {
+      const message = document.getElementById("dashboardMessage");
+      message.textContent = "Inapakia taarifa...";
+      try {
+        await loadUsers();
+        message.textContent = "Dashboard imesasishwa.";
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    }
+
+    async function loadUsers() {
+      const list = document.getElementById("usersList");
+      list.innerHTML = '<div class="empty">Inapakia watumiaji...</div>';
+      try {
+        const result = await requestJSON("/api/users");
+        allUsers = result.users || [];
+        document.getElementById("usersCount").textContent = allUsers.length;
+        document.getElementById("tipstersCount").textContent = allUsers.filter(user => user.role === "TIPSTER").length;
+        document.getElementById("activeCount").textContent = allUsers.filter(user => user.isActive).length;
+        renderUsers();
+      } catch (error) {
+        list.innerHTML = '<div class="empty"></div>';
+        list.querySelector(".empty").textContent = error.message;
+        throw error;
+      }
+    }
+
+    function renderUsers() {
+      const list = document.getElementById("usersList");
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+      const role = document.getElementById("filterRole").value;
+      const status = document.getElementById("filterStatus").value;
+
+      const users = allUsers.filter(user => {
+        const matchesRole = role === "ALL" || user.role === role;
+        const matchesStatus = status === "ALL" ||
+          (status === "ACTIVE" && user.isActive) ||
+          (status === "INACTIVE" && !user.isActive);
+        const matchesSearch = (user.username || "").toLowerCase().includes(q) ||
+          (user.email || "").toLowerCase().includes(q);
+        return matchesRole && matchesStatus && matchesSearch;
+      });
+
+      list.innerHTML = "";
+      if (!users.length) {
+        list.innerHTML = '<div class="empty">Hakuna akaunti zilizopatikana.</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        const card = document.createElement("article");
+        card.className = "user-card";
+
+        const main = document.createElement("div");
+        main.className = "user-main";
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.textContent = (user.username || "U").slice(0, 1).toUpperCase();
+
+        const info = document.createElement("div");
+        info.className = "user-info";
+        const name = document.createElement("strong");
+        name.textContent = user.username || "Mtumiaji";
+        const statusPill = document.createElement("span");
+        statusPill.className = "pill";
+        statusPill.textContent = user.isActive ? "ACTIVE" : "INACTIVE";
+        const rolePill = document.createElement("span");
+        rolePill.className = "pill role";
+        rolePill.textContent = user.role;
+        const email = document.createElement("small");
+        email.textContent = user.email || "Email haipo";
+        info.append(name, statusPill, rolePill, email);
+        main.append(avatar, info);
+        card.append(main);
+
+        const actions = document.createElement("div");
+        actions.className = "user-actions";
+        if (user.role !== "SUPER_ADMIN") {
+          const select = document.createElement("select");
+          select.setAttribute("aria-label", "Chagua role mpya kwa " + (user.username || "mtumiaji"));
+          ["CUSTOMER", "TIPSTER"].forEach(roleName => {
+            const option = document.createElement("option");
+            option.value = roleName;
+            option.textContent = roleName;
+            option.selected = user.role === roleName;
+            select.append(option);
+          });
+
+          const save = document.createElement("button");
+          save.className = "secondary small-btn";
+          save.textContent = "Hifadhi Role";
+          save.onclick = () => changeRole(user.id, select.value);
+
+          const statusBtn = document.createElement("button");
+          statusBtn.className = "small-btn status-btn";
+          statusBtn.textContent = user.isActive ? "Simamisha" : "Washa Akaunti";
+          statusBtn.style.background = user.isActive ? "var(--red)" : "var(--green)";
+          statusBtn.onclick = () => changeStatus(user.id, !user.isActive);
+
+          const passwordBtn = document.createElement("button");
+          passwordBtn.className = "secondary small-btn";
+          passwordBtn.textContent = "Badili Password";
+          passwordBtn.onclick = () => resetPassword(user.id);
+          actions.append(select, save, statusBtn, passwordBtn);
+        } else {
+          const own = document.createElement("small");
+          own.className = "sub";
+          own.textContent = "Akaunti ya msimamizi mkuu — haiwezi kubadilishwa hapa.";
+          actions.append(own);
+        }
+
+        card.append(actions);
+        list.append(card);
+      });
+    }
+
+    async function changeRole(id, role) {
+      if (!confirm("Unathibitisha kubadilisha role ya akaunti hii?")) return;
+      try {
+        await requestJSON("/api/users/" + encodeURIComponent(id) + "/role", {
+          method: "PATCH",
+          body: JSON.stringify({ role })
+        });
+        document.getElementById("dashboardMessage").textContent = "Role imebadilishwa kikamilifu.";
+        await loadUsers();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function changeStatus(id, isActive) {
+      const action = isActive ? "kuwasha" : "kusimamisha";
+      if (!confirm("Unathibitisha " + action + " akaunti hii?")) return;
+      try {
+        await requestJSON("/api/users/" + encodeURIComponent(id) + "/status", {
+          method: "PATCH",
+          body: JSON.stringify({ isActive })
+        });
+        document.getElementById("dashboardMessage").textContent = "Hali ya akaunti imebadilishwa.";
+        await loadUsers();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function resetPassword(id) {
+      const newPassword = prompt("Ingiza password mpya yenye herufi 8 au zaidi:");
+      if (newPassword === null) return;
+      if (newPassword.length < 8) {
+        alert("Password lazima iwe na herufi 8 au zaidi.");
+        return;
+      }
+      if (newPassword.length > 128) {
+        alert("Password imezidi urefu unaoruhusiwa.");
+        return;
+      }
+      if (!confirm("Unathibitisha kubadilisha password ya akaunti hii?")) return;
+      try {
+        await requestJSON("/api/users/" + encodeURIComponent(id) + "/password", {
+          method: "PATCH",
+          body: JSON.stringify({ newPassword })
+        });
+        document.getElementById("dashboardMessage").textContent = "Password imebadilishwa kikamilifu.";
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+  </script>
+</body>
+</html>
