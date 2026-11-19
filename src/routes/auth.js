@@ -15,7 +15,7 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   username: z.string().trim().min(3).max(50),
   email: z.string().trim().email().max(254),
-  password: z.string().min(12).max(200)
+  password: z.string().min(8).max(200)
 });
 
 router.post("/register", async (req, res) => {
@@ -23,7 +23,7 @@ router.post("/register", async (req, res) => {
 
   if (!parsed.success) {
     return res.status(400).json({
-      error: "Username, valid email and password of at least 12 characters are required"
+      error: "Username, valid email and password of at least 8 characters are required"
     });
   }
 
@@ -62,7 +62,7 @@ router.post("/register", async (req, res) => {
       }
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Account created successfully",
       user
     });
@@ -74,7 +74,9 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       error: "Registration failed"
     });
   }
@@ -109,7 +111,7 @@ router.post("/login", async (req, res) => {
     { expiresIn: "8h" }
   );
 
-  res.json({
+  return res.json({
     token,
     user: {
       id: user.id,
