@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -29,8 +28,10 @@ router.get("/", async (req, res) => {
     });
 
     return res.json({ users });
+
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       error: "Could not fetch users"
     });
@@ -84,8 +85,10 @@ router.patch("/:id/role", async (req, res) => {
       message: "User role updated successfully",
       user: updatedUser
     });
+
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       error: "Could not update user role"
     });
@@ -143,8 +146,10 @@ router.patch("/:id/status", async (req, res) => {
         : "User account suspended successfully",
       user: updatedUser
     });
+
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       error: "Could not update user status"
     });
@@ -154,14 +159,14 @@ router.patch("/:id/status", async (req, res) => {
 // RESET USER PASSWORD
 router.patch("/:id/password", async (req, res) => {
   const schema = z.object({
-    newPassword: z.string().min(12).max(128)
+    newPassword: z.string().min(8).max(128)
   });
 
   const parsed = schema.safeParse(req.body);
 
   if (!parsed.success) {
     return res.status(400).json({
-      error: "Password must contain at least 12 characters"
+      error: "Password must contain at least 8 characters"
     });
   }
 
@@ -195,8 +200,10 @@ router.patch("/:id/password", async (req, res) => {
     return res.json({
       message: "Password reset successfully"
     });
+
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       error: "Could not reset password"
     });
