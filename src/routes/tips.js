@@ -1,29 +1,27 @@
-import { Router } from "express";
-import { z } from "zod";
-import { prisma } from "../db.js";
-import {
-  requireAuth,
-  requireSuperAdmin
-} from "../middleware/auth.js";
+const express = require("express");
+const { z } = require("zod");
+const prisma = require("../lib/prisma");
+const { requireAuth } = require("../middleware/auth");
 
-const router = Router();
+const router = express.Router();
 
 router.use(requireAuth);
 
 const createSchema = z.object({
-  matchName: z.string().trim().min(3).max(200),
-  prediction: z.string().trim().min(1).max(200),
-  odds: z.number().positive().max(10000).optional(),
+  matchName: z.string().min(3).max(200),
+  prediction: z.string().min(1).max(200),
+  odds: z.coerce.number().positive().max(10000).optional(),
   category: z.enum(["FREE", "PREMIUM"]).default("FREE"),
-  kickoffAt: z.string().datetime().optional()
+  kickoffAt: z.string().datetime().optional().nullable(),
+  validityUntil: z.string().datetime()
 });
 
-// GET TIPS
 router.get("/", async (req, res) => {
   try {
-    const where = req.user.role === "CUSTOMER"
-      ? { category: "FREE" }
-      : {};
+    const where =
+      req.user.role === "CUSTOMER"
+        ? { category: "FREE" }
+        : {};
 
     const tips = await prisma.tip.findMany({
       where,
@@ -35,39 +33,31 @@ router.get("/", async (req, res) => {
           }
         }
       },
-      orderBy: {
-        createdAt: "desc"
-      },
+      orderBy: { createdAt: "desc" },
       take: 100
     });
 
-    return res.json({ tips });
+    res.json(tips);
   } catch (error) {
-    console.error("Fetch tips error:", error);
-    return res.status(500).json({
-      error: "Could not fetch tips"
-    });
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kupata tips." });
   }
 });
 
-// PUBLISH TIP
 router.post("/", async (req, res) => {
-  if (!["SUPER_ADMIN", "TIPSTER"].includes(req.user.role)) {
-    return res.status(403).json({
-      error: "Only Admin and Tipsters can publish tips"
-    });
-  }
-
-  const parsed = createSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: "Invalid tip details"
-    });
-  }
-
   try {
-    const data = parsed.data;
+    if (!["SUPER_ADMIN", "TIPSTER"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Huruhusiwi kuchapisha tips." });
+    }
+
+    const data = createSchema.parse(req.body);
+    const validityUntil = new Date(data.validityUntil);
+
+    if (validityUntil <= new Date()) {
+      return res.status(400).json({
+        message: "Muda wa mwisho lazima uwe mbele ya muda wa sasa."
+      });
+    }
 
     const tip = await prisma.tip.create({
       data: {
@@ -76,104 +66,116 @@ router.post("/", async (req, res) => {
         prediction: data.prediction,
         odds: data.odds,
         category: data.category,
-        kickoffAt: data.kickoffAt
-          ? new Date(data.kickoffAt)
-          : undefined
-      },
-      include: {
-        tipster: {
-          select: {
-            username: true
-          }
-        }
+        kickoffAt: data.kickoffAt ? new Date(data.kickoffAt) : null,
+        validityUntil
       }
     });
 
-    return res.status(201).json({
-      message: "Tip published successfully",
-      tip
-    });
+    res.status(201).json(tip);
   } catch (error) {
-    console.error("Publish tip error:", error);
-    return res.status(500).json({
-      error: "Could not publish tip"
-    });
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        message: "Taarifa ulizoingiza hazijakamilika au si sahihi.",
+        errors: error.errors
+      });
+    }
+
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kuchapisha tip." });
   }
 });
 
-// DELETE OWN TIP
 router.delete("/:id", async (req, res) => {
-  if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
-    return res.status(403).json({
-      error: "Only Tipsters and Admin can delete tips"
-    });
-  }
-
   try {
-    const deleted = await prisma.tip.deleteMany({
+    const tip = await prisma.tip.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!tip) {
+      return res.status(404).json({ message: "Tip haijapatikana." });
+    }
+
+    if (
+      req.user.role !== "SUPER_ADMIN" &&
+      tip.tipsterId !== req.user.id
+    ) {
+      return res.status(403).json({ message: "Huruhusiwi kufuta tip hii." });
+    }
+
+    await prisma.tip.delete({ where: { id: tip.id } });
+
+    res.json({ message: "Tip imefutwa." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kufuta tip." });
+  }
+});
+
+router.patch("/:id/result", async (req, res) => {
+  try {
+    if (req.user.role !== "TIPSTER") {
+      return res.status(403).json({
+        message: "Ni Tipster aliyechapisha tip pekee anayeruhusiwa kuweka matokeo."
+      });
+    }
+
+    const schema = z.object({
+      result: z.enum(["WON", "LOST"])
+    });
+
+    const { result } = schema.parse(req.body);
+    const now = new Date();
+
+    const updated = await prisma.tip.updateMany({
       where: {
         id: req.params.id,
-        tipsterId: req.user.id
-      }
-    });
-
-    if (deleted.count !== 1) {
-      return res.status(404).json({
-        error: "Tip not found or you are not allowed to delete it"
-      });
-    }
-
-    return res.json({
-      message: "Tip deleted successfully"
-    });
-  } catch (error) {
-    console.error("Delete tip error:", error);
-    return res.status(500).json({
-      error: "Could not delete tip"
-    });
-  }
-});
-
-// UPDATE TIP RESULT - SUPER ADMIN ONLY
-router.patch("/:id/result", requireSuperAdmin, async (req, res) => {
-  const schema = z.object({
-    result: z.enum(["PENDING", "WON", "LOST", "VOID"])
-  });
-
-  const parsed = schema.safeParse(req.body);
-
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: "Invalid result"
-    });
-  }
-
-  try {
-    const tip = await prisma.tip.update({
-      where: {
-        id: req.params.id
+        tipsterId: req.user.id,
+        result: "PENDING",
+        validityUntil: { lte: now }
       },
-      data: {
-        result: parsed.data.result
-      }
+      data: { result }
     });
 
-    return res.json({
-      message: "Tip result updated",
-      tip
-    });
-  } catch (error) {
-    if (error.code === "P2025") {
-      return res.status(404).json({
-        error: "Tip not found"
+    if (updated.count === 0) {
+      const tip = await prisma.tip.findUnique({
+        where: { id: req.params.id }
+      });
+
+      if (!tip) {
+        return res.status(404).json({ message: "Tip haijapatikana." });
+      }
+
+      if (tip.tipsterId !== req.user.id) {
+        return res.status(403).json({ message: "Hii si tip yako." });
+      }
+
+      if (tip.result !== "PENDING") {
+        return res.status(400).json({
+          message: "Matokeo ya tip hii tayari yamewekwa na hayawezi kubadilishwa."
+        });
+      }
+
+      return res.status(400).json({
+        message: "Huwezi kuweka matokeo kabla muda wa tip kuisha."
       });
     }
 
-    console.error("Update result error:", error);
-    return res.status(500).json({
-      error: "Could not update tip result"
+    const updatedTip = await prisma.tip.findUnique({
+      where: { id: req.params.id }
     });
+
+    res.json({
+      message: "Matokeo yamehifadhiwa.",
+      tip: updatedTip
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Chagua WON au LOST pekee." });
+    }
+
+    console.error(error);
+    res.status(500).json({ message: "Imeshindikana kuhifadhi matokeo." });
   }
 });
 
-export default router;
+module.exports = router;
