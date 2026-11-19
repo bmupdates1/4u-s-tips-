@@ -7,76 +7,215 @@
 
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#071b15;color:#fff;font-family:Arial,sans-serif}
-header{background:#063b2b;text-align:center;padding:22px 12px;border-bottom:2px solid #d4af37}
+
+body{
+ margin:0;
+ background:#071b15;
+ color:#fff;
+ font-family:Arial,sans-serif;
+}
+
+header{
+ background:#063b2b;
+ text-align:center;
+ padding:22px 12px;
+ border-bottom:2px solid #d4af37;
+}
+
 h1,h2,h3{color:#d4af37}
-main{max-width:750px;margin:auto;padding:16px}
-.panel{background:#102a21;border:1px solid #315644;border-radius:12px;padding:17px;margin-bottom:17px}
+
+main{
+ max-width:750px;
+ margin:auto;
+ padding:16px;
+}
+
+.panel{
+ background:#102a21;
+ border:1px solid #315644;
+ border-radius:12px;
+ padding:17px;
+ margin-bottom:17px;
+}
+
 .profile{text-align:center}
-.profile img{width:125px;height:125px;object-fit:cover;border-radius:50%;border:3px solid #d4af37;background:#071b15}
+
+.profile img{
+ width:125px;
+ height:125px;
+ object-fit:cover;
+ border-radius:50%;
+ border:3px solid #d4af37;
+ background:#071b15;
+}
+
 .profile h2{margin-bottom:5px}
+
 .muted{color:#b7c9bf}
-.tip{background:#071b15;border:1px solid #315644;border-radius:9px;padding:13px;margin:10px 0;overflow-wrap:anywhere}
+
+.tip{
+ background:#071b15;
+ border:1px solid #315644;
+ border-radius:9px;
+ padding:13px;
+ margin:10px 0;
+ overflow-wrap:anywhere;
+}
+
 .tip h3{margin-top:0}
+
 .free-title{color:#35d39a}
 .premium-title{color:#d4af37}
-.locked{color:#ff7777;font-weight:bold}
-.countdown{font-size:18px;font-weight:bold;color:#d4af37;margin:10px 0}
-.tip-group{margin:12px 0;padding:12px;border:1px solid #315b49;border-radius:10px;background:#092f25}
-.tip-group summary{cursor:pointer;font-weight:bold;padding:8px;user-select:none}
+
+.countdown{
+ font-size:18px;
+ font-weight:bold;
+ color:#d4af37;
+ margin:10px 0;
+}
+
+.tip-group{
+ margin:12px 0;
+ padding:12px;
+ border:1px solid #315b49;
+ border-radius:10px;
+ background:#092f25;
+}
+
+.tip-group summary{
+ cursor:pointer;
+ font-weight:bold;
+ padding:8px;
+ user-select:none;
+}
+
 .tip-group summary::marker{color:#d4af37}
+
 .tip-group>div{padding-top:10px}
-.empty{text-align:center;color:#aaa;padding:12px}
-.booking-code{background:#071b15;border:1px solid #315644;padding:12px;border-radius:8px;margin:9px 0;overflow-wrap:anywhere}
-.code-value{color:#35d39a;font-weight:bold;word-break:break-all}
-.premium-lock{background:#2b2010;border:1px solid #9c7729;padding:15px;border-radius:9px;text-align:center}
-a.back{display:inline-block;color:#d4af37;text-decoration:none;margin-bottom:15px}
+
+.empty{
+ text-align:center;
+ color:#aaa;
+ padding:12px;
+}
+
+.booking-code{
+ background:#071b15;
+ border:1px solid #315644;
+ padding:12px;
+ border-radius:8px;
+ margin:9px 0;
+ overflow-wrap:anywhere;
+}
+
+.code-value{
+ color:#35d39a;
+ font-weight:bold;
+ word-break:break-all;
+}
+
+.premium-lock{
+ background:#2b2010;
+ border:1px solid #9c7729;
+ padding:15px;
+ border-radius:9px;
+ text-align:center;
+}
+
+a.back{
+ display:inline-block;
+ color:#d4af37;
+ text-decoration:none;
+ margin-bottom:15px;
+}
 </style>
 </head>
 
 <body>
+
 <header>
 <h1>4U'S TIPS ⚽</h1>
 <p>TIPSTER PROFILE</p>
 </header>
 
 <main>
+
 <a class="back" href="/">← BACK TO HOME</a>
 
 <section class="panel profile">
-<img id="profileImage" src="https://placehold.co/125x125/063b2b/d4af37?text=4U" alt="Tipster profile picture">
+<img
+ id="profileImage"
+ src="https://placehold.co/125x125/063b2b/d4af37?text=4U"
+ alt="Tipster profile picture"
+>
+
 <h2 id="tipsterName">Loading Tipster...</h2>
-<p class="muted" id="tipsterDescription">4U'S TIPS Tipster</p>
+
+<p class="muted" id="tipsterDescription">
+4U'S TIPS Tipster
+</p>
+
 <p class="muted" id="tipsterStats"></p>
 </section>
 
+<!-- FREE BOOKING CODES: ZIMEFUNGWA MWANZO -->
 <section class="panel">
-<h2>FREE BOOKING CODES 🟢</h2>
+<details class="tip-group">
+
+<summary class="free-title">
+🟢 FREE BOOKING CODES
+</summary>
+
 <div id="freeBookingCodes">Loading...</div>
+
+</details>
 </section>
 
+<!-- PREMIUM BOOKING CODES: ZIMEFUNGWA MWANZO -->
 <section class="panel">
-<h2>PREMIUM BOOKING CODES 🔒</h2>
+<details class="tip-group">
+
+<summary class="premium-title">
+🔒 PREMIUM BOOKING CODES
+</summary>
+
 <div id="premiumBookingCodes">Loading...</div>
+
+</details>
 </section>
 
+<!-- MATCH TIPS -->
 <section class="panel">
+
 <h2>MATCH TIPS ⚽</h2>
 
 <details class="tip-group">
-<summary class="free-title">🟢 FREE TIPS (<span id="freeTipCount">0</span>)</summary>
+
+<summary class="free-title">
+🟢 FREE TIPS (<span id="freeTipCount">0</span>)
+</summary>
+
 <div id="freeTips">Loading...</div>
+
 </details>
 
 <details class="tip-group">
-<summary class="premium-title">🔒 PREMIUM TIPS (<span id="premiumTipCount">0</span>)</summary>
+
+<summary class="premium-title">
+🔒 PREMIUM TIPS (<span id="premiumTipCount">0</span>)
+</summary>
+
 <div id="premiumTips">Loading...</div>
+
 </details>
+
 </section>
+
 </main>
 
 <script>
 const API=window.location.origin;
+
 const params=new URLSearchParams(window.location.search);
 const tipsterId=params.get("id");
 
@@ -85,20 +224,31 @@ function element(id){
 }
 
 function safeText(value,fallback=""){
- return value===null||value===undefined||value===""?fallback:String(value);
+ return value===null||value===undefined||value===""
+  ?fallback
+  :String(value);
 }
 
 function addText(parent,tag,text,className){
  const node=document.createElement(tag);
+
  node.textContent=text;
- if(className)node.className=className;
+
+ if(className){
+  node.className=className;
+ }
+
  parent.appendChild(node);
+
  return node;
 }
 
 async function getJSON(path){
+
  const response=await fetch(API+path);
+
  const text=await response.text();
+
  let data={};
 
  try{
@@ -108,13 +258,18 @@ async function getJSON(path){
  }
 
  if(!response.ok){
-  throw new Error(data.error||data.message||"Imeshindikana kupakia taarifa.");
+  throw new Error(
+   data.error||
+   data.message||
+   "Imeshindikana kupakia taarifa."
+  );
  }
 
  return data;
 }
 
 function formatDate(value){
+
  if(!value)return "Not set";
 
  const date=new Date(value);
@@ -126,7 +281,9 @@ function formatDate(value){
 
 // COUNTDOWN YA BOOKING CODES
 function updateBookingCountdowns(){
+
  document.querySelectorAll(".countdown").forEach(item=>{
+
   const kickoff=item.dataset.kickoff;
 
   if(!kickoff){
@@ -134,16 +291,22 @@ function updateBookingCountdowns(){
    return;
   }
 
-  const difference=new Date(kickoff).getTime()-Date.now();
+  const difference=
+   new Date(kickoff).getTime()-Date.now();
 
   if(difference<=0){
+
    const card=item.closest(".booking-code");
-   const target=card ? card.parentElement : null;
+
+   const target=card?card.parentElement:null;
 
    if(card)card.remove();
 
    if(target && !target.querySelector(".booking-code")){
-    target.textContent="Hakuna Booking Codes katika kundi hili kwa sasa.";
+
+    target.textContent=
+     "Hakuna Booking Codes katika kundi hili kwa sasa.";
+
     target.className="empty";
    }
 
@@ -151,9 +314,18 @@ function updateBookingCountdowns(){
   }
 
   const days=Math.floor(difference/86400000);
-  const hours=Math.floor((difference%86400000)/3600000);
-  const minutes=Math.floor((difference%3600000)/60000);
-  const seconds=Math.floor((difference%60000)/1000);
+
+  const hours=Math.floor(
+   (difference%86400000)/3600000
+  );
+
+  const minutes=Math.floor(
+   (difference%3600000)/60000
+  );
+
+  const seconds=Math.floor(
+   (difference%60000)/1000
+  );
 
   item.textContent=
    "⏳ Muda uliobaki: "+
@@ -161,27 +333,42 @@ function updateBookingCountdowns(){
    hours+"h "+
    minutes+"m "+
    seconds+"s";
+
  });
 }
 
+// KUONYESHA BOOKING CODES
 function renderBookingCodes(slips,category,target){
+
  target.innerHTML="";
 
- const matching=slips.filter(s=>s.category===category);
+ const matching=slips.filter(
+  slip=>slip.category===category
+ );
 
  if(!matching.length){
-  target.textContent="Hakuna Booking Codes katika kundi hili kwa sasa.";
+
+  target.textContent=
+   "Hakuna Booking Codes katika kundi hili kwa sasa.";
+
   target.className="empty";
+
   return;
  }
 
  target.className="";
 
  matching.forEach(slip=>{
+
   const card=document.createElement("div");
+
   card.className="booking-code";
 
-  addText(card,"h3",safeText(slip.title,"Booking Slip"));
+  addText(
+   card,
+   "h3",
+   safeText(slip.title,"Booking Slip")
+  );
 
   addText(
    card,
@@ -196,15 +383,25 @@ function renderBookingCodes(slips,category,target){
   );
 
   const countdown=document.createElement("div");
+
   countdown.className="countdown";
-  countdown.dataset.kickoff=slip.kickoffAt || "";
+
+  countdown.dataset.kickoff=slip.kickoffAt||"";
+
   card.appendChild(countdown);
 
   if(category==="PREMIUM"){
+
    const locked=document.createElement("div");
+
    locked.className="premium-lock";
 
-   addText(locked,"p","🔒 PREMIUM BOOKING CODE");
+   addText(
+    locked,
+    "p",
+    "🔒 PREMIUM BOOKING CODE"
+   );
+
    addText(
     locked,
     "p",
@@ -214,85 +411,154 @@ function renderBookingCodes(slips,category,target){
    card.appendChild(locked);
 
   }else{
+
    const codes=slip.bookingCodes||[];
 
    if(codes.length){
+
     codes.forEach(code=>{
+
      const row=document.createElement("p");
 
-     row.textContent=safeText(code.bookmaker,"Bookmaker")+": ";
+     row.textContent=
+      safeText(code.bookmaker,"Bookmaker")+": ";
 
      const value=document.createElement("span");
+
      value.className="code-value";
-     value.textContent=safeText(code.code,"Code haipo");
+
+     value.textContent=
+      safeText(code.code,"Code haipo");
 
      row.appendChild(value);
+
      card.appendChild(row);
+
     });
 
    }else{
-    addText(card,"p","Booking code haijawekwa.");
+
+    addText(
+     card,
+     "p",
+     "Booking code haijawekwa."
+    );
+
    }
   }
 
   target.appendChild(card);
+
  });
 
  updateBookingCountdowns();
 }
 
+// KUONYESHA MATCH TIPS
 function renderMatchTips(tips){
- const free=tips.filter(t=>t.category==="FREE");
- const premium=tips.filter(t=>t.category==="PREMIUM");
+
+ const free=tips.filter(
+  tip=>tip.category==="FREE"
+ );
+
+ const premium=tips.filter(
+  tip=>tip.category==="PREMIUM"
+ );
 
  element("freeTipCount").textContent=free.length;
+
  element("premiumTipCount").textContent=premium.length;
 
  const freeTarget=element("freeTips");
+
  const premiumTarget=element("premiumTips");
 
  freeTarget.innerHTML="";
+
  premiumTarget.innerHTML="";
 
  if(!free.length){
+
   freeTarget.textContent="Hakuna FREE TIPS kwa sasa.";
+
   freeTarget.className="empty";
 
  }else{
+
   freeTarget.className="";
 
   free.forEach(tip=>{
+
    const card=document.createElement("div");
+
    card.className="tip";
 
-   addText(card,"h3",safeText(tip.matchName,"Match"));
-   addText(card,"p","Prediction: "+safeText(tip.prediction,"Not set"));
-   addText(card,"p","Odds: "+safeText(tip.odds,"Not set"));
-   addText(card,"p","Kick-Off: "+formatDate(tip.kickoffAt));
+   addText(
+    card,
+    "h3",
+    safeText(tip.matchName,"Match")
+   );
 
-   card.appendChild(document.createTextNode("🟢 FREE TIP"));
+   addText(
+    card,
+    "p",
+    "Prediction: "+safeText(tip.prediction,"Not set")
+   );
+
+   addText(
+    card,
+    "p",
+    "Odds: "+safeText(tip.odds,"Not set")
+   );
+
+   addText(
+    card,
+    "p",
+    "Kick-Off: "+formatDate(tip.kickoffAt)
+   );
+
+   card.appendChild(
+    document.createTextNode("🟢 FREE TIP")
+   );
 
    freeTarget.appendChild(card);
+
   });
  }
 
  if(!premium.length){
-  premiumTarget.textContent="Hakuna PREMIUM TIPS kwa sasa.";
+
+  premiumTarget.textContent=
+   "Hakuna PREMIUM TIPS kwa sasa.";
+
   premiumTarget.className="empty";
 
  }else{
+
   premiumTarget.className="";
 
   premium.forEach(tip=>{
+
    const card=document.createElement("div");
+
    card.className="tip";
 
-   addText(card,"h3",safeText(tip.matchName,"Match"));
+   addText(
+    card,
+    "h3",
+    safeText(tip.matchName,"Match")
+   );
 
    const lock=document.createElement("div");
+
    lock.className="premium-lock";
 
-   addText(lock,"p","🔒 PREMIUM TIP LOCKED");
+   addText(
+    lock,
+    "p",
+    "🔒 PREMIUM TIP LOCKED"
+   );
+
    addText(
     lock,
     "p",
@@ -300,19 +566,29 @@ function renderMatchTips(tips){
    );
 
    card.appendChild(lock);
+
    premiumTarget.appendChild(card);
+
   });
  }
 }
 
+// KUPAKIA PROFILE
 async function loadProfile(){
+
  if(!tipsterId){
-  element("tipsterName").textContent="Tipster hajapatikana";
-  element("tipsterDescription").textContent="Profile ID haipo kwenye link.";
+
+  element("tipsterName").textContent=
+   "Tipster hajapatikana";
+
+  element("tipsterDescription").textContent=
+   "Profile ID haipo kwenye link.";
+
   return;
  }
 
  try{
+
   const result=await getJSON(
    "/api/tipsters/"+encodeURIComponent(tipsterId)
   );
@@ -326,10 +602,14 @@ async function loadProfile(){
    safeText(tipster.bio,"4U'S TIPS Tipster");
 
   if(tipster.profileImage){
-   element("profileImage").src=tipster.profileImage;
+
+   element("profileImage").src=
+    tipster.profileImage;
+
   }
 
   const tips=tipster.tips||[];
+
   const slips=tipster.slips||[];
 
   element("tipsterStats").textContent=
@@ -350,20 +630,33 @@ async function loadProfile(){
   );
 
  }catch(error){
-  element("tipsterName").textContent="Imeshindikana kupakia Profile";
-  element("tipsterDescription").textContent=error.message;
+
+  element("tipsterName").textContent=
+   "Imeshindikana kupakia Profile";
+
+  element("tipsterDescription").textContent=
+   error.message;
 
   element("freeTips").textContent=error.message;
+
   element("premiumTips").textContent=error.message;
-  element("freeBookingCodes").textContent=error.message;
-  element("premiumBookingCodes").textContent=error.message;
+
+  element("freeBookingCodes").textContent=
+   error.message;
+
+  element("premiumBookingCodes").textContent=
+   error.message;
+
  }
 }
 
-// Sasisha countdown kila sekunde.
+// COUNTDOWN HUJIRUDIA KILA SEKUNDE
 setInterval(updateBookingCountdowns,1000);
 
+// ANZA KUPAKIA PROFILE
 loadProfile();
+
 </script>
+
 </body>
 </html>
