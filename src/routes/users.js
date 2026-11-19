@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -45,7 +46,9 @@ router.patch("/:id/role", async (req, res) => {
   const parsed = schema.safeParse(req.body);
 
   if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid role" });
+    return res.status(400).json({
+      error: "Invalid role"
+    });
   }
 
   try {
@@ -54,7 +57,9 @@ router.patch("/:id/role", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({
+        error: "User not found"
+      });
     }
 
     if (user.role === "SUPER_ADMIN") {
@@ -70,7 +75,8 @@ router.patch("/:id/role", async (req, res) => {
         id: true,
         username: true,
         email: true,
-        role: true
+        role: true,
+        isActive: true
       }
     });
 
@@ -82,6 +88,65 @@ router.patch("/:id/role", async (req, res) => {
     console.error(error);
     return res.status(500).json({
       error: "Could not update user role"
+    });
+  }
+});
+
+// ACTIVATE / DEACTIVATE USER
+router.patch("/:id/status", async (req, res) => {
+  const schema = z.object({
+    isActive: z.boolean()
+  });
+
+  const parsed = schema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "isActive must be true or false"
+    });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found"
+      });
+    }
+
+    if (user.role === "SUPER_ADMIN") {
+      return res.status(403).json({
+        error: "Super Admin account cannot be suspended here"
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.params.id },
+      data: {
+        isActive: parsed.data.isActive
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true
+      }
+    });
+
+    return res.json({
+      message: parsed.data.isActive
+        ? "User account activated successfully"
+        : "User account suspended successfully",
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: "Could not update user status"
     });
   }
 });
