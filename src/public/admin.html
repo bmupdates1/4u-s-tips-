@@ -1,774 +1,14 @@
-
-<!DOCTYPE html>
-<html lang="sw">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4U'S TIPS | Super Admin</title>
-
-<style>
-:root {
-  --bg:#071911;
-  --panel:#10271e;
-  --panel2:#153328;
-  --line:#285340;
-  --gold:#e0bd55;
-  --text:#f5f7f5;
-  --muted:#a9bdb1;
-  --red:#d95c5c;
-  --green:#48b982;
-}
-
-* {
-  box-sizing:border-box;
-}
-
-body {
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Arial,sans-serif;
-}
-
-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:14px;
-  padding:18px 22px;
-  background:#0b241a;
-  border-bottom:1px solid var(--line);
-  position:sticky;
-  top:0;
-  z-index:5;
-}
-
-.brand {
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.logo {
-  width:43px;
-  height:43px;
-  border-radius:13px;
-  background:linear-gradient(135deg,#e8ca70,#a98224);
-  display:grid;
-  place-items:center;
-  color:#122218;
-  font-weight:900;
-  font-size:18px;
-}
-
-h1 {
-  font-size:19px;
-  margin:0;
-  color:var(--gold);
-}
-
-header p {
-  margin:4px 0 0;
-  color:var(--muted);
-  font-size:11px;
-  letter-spacing:1.4px;
-}
-
-button,input,select {
-  font:inherit;
-}
-
-button {
-  border:0;
-  border-radius:9px;
-  padding:11px 14px;
-  font-weight:bold;
-  cursor:pointer;
-  background:var(--gold);
-  color:#172319;
-}
-
-button:disabled {
-  opacity:.55;
-  cursor:not-allowed;
-}
-
-.logout {
-  background:#542b2b;
-  color:#fff;
-  border:1px solid #8b4444;
-}
-
-main {
-  max-width:1180px;
-  margin:auto;
-  padding:25px 18px 50px;
-}
-
-.hidden {
-  display:none !important;
-}
-
-.welcome {
-  margin-bottom:20px;
-}
-
-.eyebrow {
-  color:var(--gold);
-  font-size:11px;
-  letter-spacing:1.8px;
-  font-weight:bold;
-}
-
-.welcome h2 {
-  font-size:26px;
-  margin:7px 0;
-}
-
-.welcome p {
-  color:var(--muted);
-  margin:0;
-}
-
-.stats {
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:13px;
-  margin:20px 0;
-}
-
-.stat,.panel {
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:15px;
-  padding:18px;
-}
-
-.stat span {
-  color:var(--muted);
-  font-size:13px;
-}
-
-.stat strong {
-  display:block;
-  font-size:29px;
-  margin-top:8px;
-  color:var(--gold);
-}
-
-.panel {
-  margin:16px 0;
-}
-
-.panel-head {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-  margin-bottom:14px;
-}
-
-.panel h3 {
-  margin:0;
-  font-size:17px;
-}
-
-.sub {
-  color:var(--muted);
-  font-size:13px;
-  margin:6px 0 0;
-}
-
-.toolbar {
-  display:flex;
-  gap:9px;
-  flex-wrap:wrap;
-}
-
-.toolbar input,.toolbar select,
-.login input {
-  background:#091c14;
-  color:var(--text);
-  border:1px solid var(--line);
-  border-radius:9px;
-  padding:11px 12px;
-  min-width:180px;
-}
-
-.secondary {
-  background:var(--panel2);
-  color:var(--text);
-  border:1px solid var(--line);
-}
-
-.user-list {
-  display:grid;
-  gap:10px;
-}
-
-.user-card {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  background:#0b2017;
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:14px;
-  min-width:0;
-}
-
-.user-main {
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-width:0;
-}
-
-.avatar {
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:#244a37;
-  display:grid;
-  place-items:center;
-  color:var(--gold);
-  font-weight:bold;
-  flex:none;
-}
-
-.user-info {
-  min-width:0;
-}
-
-.user-info strong {
-  display:block;
-  overflow-wrap:anywhere;
-}
-
-.user-info small {
-  display:block;
-  color:var(--muted);
-  margin-top:4px;
-  overflow-wrap:anywhere;
-}
-
-.user-actions {
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-.user-actions select {
-  padding:9px;
-  border-radius:8px;
-  background:#10271e;
-  color:var(--text);
-  border:1px solid var(--line);
-}
-
-.small-btn {
-  padding:9px 11px;
-  font-size:12px;
-}
-
-.pill {
-  font-size:10px;
-  letter-spacing:.7px;
-  border-radius:30px;
-  padding:5px 8px;
-  background:#244a37;
-  color:#b8f0d1;
-  margin-left:6px;
-}
-
-.pill.role {
-  background:#3c3520;
-  color:#f2d987;
-}
-
-.message {
-  min-height:18px;
-  color:var(--gold);
-  font-size:13px;
-}
-
-.empty {
-  color:var(--muted);
-  padding:20px;
-  text-align:center;
-  border:1px dashed var(--line);
-  border-radius:10px;
-}
-
-.login {
-  max-width:420px;
-  margin:8vh auto;
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:24px;
-}
-
-.login h2 {
-  color:var(--gold);
-  margin-top:0;
-}
-
-.login label {
-  display:block;
-  color:var(--muted);
-  font-size:13px;
-  margin:13px 0 6px;
-}
-
-.login input {
-  width:100%;
-}
-
-.login button {
-  width:100%;
-  margin-top:16px;
-}
-
-footer {
-  text-align:center;
-  color:#6f8b7b;
-  font-size:11px;
-  padding:22px;
-}
-
-@media(max-width:680px) {
-  header {
-    padding:14px;
-  }
-
-  .stats {
-    grid-template-columns:1fr 1fr;
-  }
-
-  .user-card {
-    align-items:flex-start;
-    flex-direction:column;
-  }
-
-  .user-actions {
-    justify-content:flex-start;
-    width:100%;
-  }
-
-  .user-actions select {
-    flex:1;
-    min-width:120px;
-  }
-
-  .welcome h2 {
-    font-size:22px;
-  }
-}
-</style>
-</head>
-
-<body>
-
-<header>
-  <div class="brand">
-    <div class="logo">4U</div>
-    <div>
-      <h1>4U'S TIPS</h1>
-      <p>SUPER ADMIN CONTROL CENTER</p>
-    </div>
-  </div>
-
-  <button id="logoutBtn"
-    class="logout hidden"
-    onclick="logout()">
-    Logout
-  </button>
-</header>
-
-<main>
-
-  <!-- LOGIN -->
-  <section id="loginPanel" class="login">
-
-    <div class="eyebrow">SECURE ACCESS</div>
-
-    <h2>Super Admin Login</h2>
-
-    <label>Username</label>
-    <input id="username"
-      autocomplete="username"
-      placeholder="Ingiza username">
-
-    <label>Password</label>
-    <input id="password"
-      type="password"
-      autocomplete="current-password"
-      placeholder="Ingiza password">
-
-    <button onclick="loginAdmin()">
-      Ingia kwenye Dashboard
-    </button>
-
-    <p id="loginMessage" class="message"></p>
-
-  </section>
-
-
-  <!-- DASHBOARD -->
-  <section id="dashboard" class="hidden">
-
-    <div class="welcome">
-
-      <div class="eyebrow">
-        SYSTEM MANAGEMENT
-      </div>
-
-      <h2>Karibu, Super Admin 👑</h2>
-
-      <p>
-        Simamia watumiaji na akaunti za Tipsters
-        katika mfumo wa 4U'S TIPS.
-      </p>
-
-    </div>
-
-
-    <!-- STATISTICS -->
-    <div class="stats">
-
-      <div class="stat">
-        <span>Jumla ya Watumiaji</span>
-        <strong id="usersCount">0</strong>
-      </div>
-
-      <div class="stat">
-        <span>Tipsters</span>
-        <strong id="tipstersCount">0</strong>
-      </div>
-
-      <div class="stat">
-        <span>Akaunti Zinazotumika</span>
-        <strong id="activeCount">0</strong>
-      </div>
-
-    </div>
-
-
-    <!-- USER MANAGEMENT -->
-    <section class="panel">
-
-      <div class="panel-head">
-
-        <div>
-          <h3>Usimamizi wa Akaunti</h3>
-
-          <p class="sub">
-            Simamia Customers na Tipsters.
-          </p>
-        </div>
-
-        <button class="secondary"
-          onclick="loadUsers()">
-          Refresh
-        </button>
-
-      </div>
-
-
-      <div class="toolbar"
-        style="margin-bottom:14px">
-
-        <input
-          id="searchInput"
-          placeholder="Tafuta username au email..."
-          oninput="renderUsers()">
-
-        <select id="filterRole"
-          onchange="renderUsers()">
-
-          <option value="ALL">Roles zote</option>
-          <option value="TIPSTER">Tipsters</option>
-          <option value="CUSTOMER">Customers</option>
-          <option value="SUPER_ADMIN">Super Admin</option>
-
-        </select>
-
-        <select id="filterStatus"
-          onchange="renderUsers()">
-
-          <option value="ALL">Status zote</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-
-        </select>
-
-      </div>
-
-
-      <div id="usersList" class="user-list">
-        <div class="empty">
-          Inapakia watumiaji...
-        </div>
-      </div>
-
-      <p id="dashboardMessage" class="message"></p>
-
-    </section>
-
-
-    <!-- ADMIN RESPONSIBILITIES -->
-    <section class="panel">
-
-      <div class="panel-head">
-        <div>
-          <h3>Majukumu ya Super Admin</h3>
-          <p class="sub">
-            Super Admin anasimamia mfumo pekee.
-          </p>
-        </div>
-      </div>
-
-      <p class="sub">
-        • Kusimamia akaunti za Tipsters na Customers
-      </p>
-
-      <p class="sub">
-        • Kubadilisha Customer kuwa Tipster au kinyume chake
-      </p>
-
-      <p class="sub">
-        • Kuangalia takwimu za watumiaji
-      </p>
-
-      <p class="sub">
-        • Kusimamia usalama wa mfumo
-      </p>
-
-      <p class="sub" style="color:#e7c96f">
-        Uchapishaji wa Match Tips na Booking Codes
-        unabaki kwenye Tipster Dashboard.
-      </p>
-
-    </section>
-
-  </section>
-
-</main>
-
-<footer>
-  4U'S TIPS · PREDICT SMARTER
-</footer>
-
-
-<script>
-
-const API = window.location.origin;
-
-let adminToken = "";
-let allUsers = [];
-
-
-async function requestJSON(path, options = {}) {
-
-  const response = await fetch(API + path, {
-
-    ...options,
-
-    headers: {
-
-      "Content-Type": "application/json",
-
-      ...(adminToken
-        ? {"Authorization":"Bearer " + adminToken}
-        : {}),
-
-      ...(options.headers || {})
-
-    }
-
-  });
-
-
-  const contentType =
-    response.headers.get("content-type") || "";
-
-  if (!contentType.includes("application/json")) {
-    throw new Error("Server haikurudisha majibu sahihi.");
-  }
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data.error || "Request failed: " + response.status
-    );
-  }
-
-  return data;
-}
-
-
-
-// LOGIN
-async function loginAdmin() {
-
-  const username =
-    document.getElementById("username").value.trim();
-
-  const password =
-    document.getElementById("password").value;
-
-  const message =
-    document.getElementById("loginMessage");
-
-  if (!username || !password) {
-    message.textContent = "Jaza username na password kwanza.";
-    return;
-  }
-
-  message.textContent = "Inakagua taarifa...";
-
-  try {
-
-    const result = await requestJSON(
-      "/api/auth/login",
-      {
-        method:"POST",
-        body:JSON.stringify({
-          username,
-          password
-        })
-      }
-    );
-
-    adminToken = result.token;
-
-    const me = await requestJSON("/api/auth/me");
-
-    if (me.user.role !== "SUPER_ADMIN") {
-
-      adminToken = "";
-
-      throw new Error(
-        "Akaunti hii si ya Super Admin."
-      );
-
-    }
-
-    document.getElementById("loginPanel")
-      .classList.add("hidden");
-
-    document.getElementById("dashboard")
-      .classList.remove("hidden");
-
-    document.getElementById("logoutBtn")
-      .classList.remove("hidden");
-
-    await loadUsers();
-
-  } catch (error) {
-
-    adminToken = "";
-    message.textContent = error.message;
-
-  }
-
-}
-
-
-
-// LOGOUT
-function logout() {
-
-  adminToken = "";
-  allUsers = [];
-
-  document.getElementById("dashboard")
-    .classList.add("hidden");
-
-  document.getElementById("logoutBtn")
-    .classList.add("hidden");
-
-  document.getElementById("loginPanel")
-    .classList.remove("hidden");
-
-  document.getElementById("password").value = "";
-
-  document.getElementById("loginMessage")
-    .textContent = "Umetoka kwenye akaunti.";
-
-}
-
-
-
-// LOAD USERS
-async function loadUsers() {
-
-  const list = document.getElementById("usersList");
-
-  list.innerHTML =
-    '<div class="empty">Inapakia watumiaji...</div>';
-
-  document.getElementById("dashboardMessage")
-    .textContent = "";
-
-  try {
-
-    const result = await requestJSON("/api/users");
-
-    allUsers = result.users || [];
-
-    document.getElementById("usersCount")
-      .textContent = allUsers.length;
-
-    document.getElementById("tipstersCount")
-      .textContent =
-        allUsers.filter(u => u.role === "TIPSTER").length;
-
-    document.getElementById("activeCount")
-      .textContent =
-        allUsers.filter(u => u.isActive).length;
-
-    renderUsers();
-
-  } catch (error) {
-
-    list.textContent = error.message;
-
-    document.getElementById("dashboardMessage")
-      .textContent = error.message;
-
-  }
-
-}
-
-
-
-// DISPLAY USERS
 function renderUsers() {
-
   const list = document.getElementById("usersList");
 
-  const q =
-    document.getElementById("searchInput")
-      .value.trim().toLowerCase();
+  const q = document.getElementById("searchInput")
+    .value.trim().toLowerCase();
 
-  const role =
-    document.getElementById("filterRole").value;
-
-  const status =
-    document.getElementById("filterStatus").value;
-
+  const role = document.getElementById("filterRole").value;
+  const status = document.getElementById("filterStatus").value;
 
   const users = allUsers.filter(user => {
-
-    const matchesRole =
-      role === "ALL" || user.role === role;
+    const matchesRole = role === "ALL" || user.role === role;
 
     const matchesStatus =
       status === "ALL" ||
@@ -780,24 +20,17 @@ function renderUsers() {
       (user.email || "").toLowerCase().includes(q);
 
     return matchesRole && matchesStatus && matchesSearch;
-
   });
-
 
   list.innerHTML = "";
 
   if (!users.length) {
-
     list.innerHTML =
       '<div class="empty">Hakuna akaunti zilizopatikana.</div>';
-
     return;
-
   }
 
-
   users.forEach(user => {
-
     const card = document.createElement("article");
     card.className = "user-card";
 
@@ -806,10 +39,8 @@ function renderUsers() {
 
     const avatar = document.createElement("div");
     avatar.className = "avatar";
-
     avatar.textContent =
-      (user.username || "U").slice(0,1).toUpperCase();
-
+      (user.username || "U").slice(0, 1).toUpperCase();
 
     const info = document.createElement("div");
     info.className = "user-info";
@@ -817,122 +48,143 @@ function renderUsers() {
     const name = document.createElement("strong");
     name.textContent = user.username;
 
-
-    const status = document.createElement("span");
-    status.className = "pill";
-    status.textContent =
+    const statusPill = document.createElement("span");
+    statusPill.className = "pill";
+    statusPill.textContent =
       user.isActive ? "ACTIVE" : "INACTIVE";
-
 
     const rolePill = document.createElement("span");
     rolePill.className = "pill role";
     rolePill.textContent = user.role;
 
-
     const email = document.createElement("small");
     email.textContent = user.email || "Email haipo";
 
-
-    info.append(name, status, rolePill, email);
-
+    info.append(name, statusPill, rolePill, email);
     main.append(avatar, info);
-
     card.append(main);
-
 
     const actions = document.createElement("div");
     actions.className = "user-actions";
 
-
     if (user.role !== "SUPER_ADMIN") {
-
       const select = document.createElement("select");
 
-      ["CUSTOMER","TIPSTER"].forEach(r => {
-
+      ["CUSTOMER", "TIPSTER"].forEach(r => {
         const option = document.createElement("option");
-
         option.value = r;
         option.textContent = r;
-
-        if (user.role === r) {
-          option.selected = true;
-        }
-
+        option.selected = user.role === r;
         select.append(option);
-
       });
 
-
       const save = document.createElement("button");
-
       save.className = "secondary small-btn";
-
       save.textContent = "Hifadhi Role";
+      save.onclick = () => changeRole(user.id, select.value);
 
-      save.onclick = () => {
-        changeRole(user.id, select.value);
-      };
+      const statusBtn = document.createElement("button");
+      statusBtn.className = "small-btn";
+      statusBtn.textContent =
+        user.isActive ? "Simamisha" : "Washa Akaunti";
 
+      statusBtn.style.background =
+        user.isActive ? "#542b2b" : "#286342";
+      statusBtn.style.color = "#fff";
 
-      actions.append(select, save);
+      statusBtn.onclick = () =>
+        changeStatus(user.id, !user.isActive);
+
+      const passwordBtn = document.createElement("button");
+      passwordBtn.className = "secondary small-btn";
+      passwordBtn.textContent = "Badili Password";
+      passwordBtn.onclick = () => resetPassword(user.id);
+
+      actions.append(
+        select,
+        save,
+        statusBtn,
+        passwordBtn
+      );
 
     } else {
-
       const own = document.createElement("small");
-
       own.style.color = "var(--muted)";
-
       own.textContent = "Akaunti ya msimamizi mkuu";
-
       actions.append(own);
-
     }
 
-
     card.append(actions);
-
     list.append(card);
-
   });
-
 }
 
 
+// ACTIVATE / DEACTIVATE ACCOUNT
+async function changeStatus(id, isActive) {
+  const action = isActive ? "kuwasha" : "kusimamisha";
 
-// CHANGE ROLE
-async function changeRole(id, role) {
-
-  if (!confirm(
-    "Unathibitisha kubadilisha role ya akaunti hii?"
-  )) {
+  if (!confirm(`Unathibitisha ${action} akaunti hii?`)) {
     return;
   }
 
   try {
-
     await requestJSON(
-      "/api/users/" + encodeURIComponent(id) + "/role",
+      "/api/users/" + encodeURIComponent(id) + "/status",
       {
-        method:"PATCH",
-        body:JSON.stringify({role})
+        method: "PATCH",
+        body: JSON.stringify({ isActive })
       }
     );
 
-    document.getElementById("dashboardMessage")
-      .textContent = "Role imebadilishwa kikamilifu.";
+    document.getElementById("dashboardMessage").textContent =
+      "Hali ya akaunti imebadilishwa.";
 
     await loadUsers();
 
   } catch (error) {
-
     alert(error.message);
-
   }
-
 }
 
-</script>
 
-</body>
-</html>
+// RESET USER PASSWORD
+async function resetPassword(id) {
+  const newPassword = prompt(
+    "Ingiza password mpya yenye herufi 8 au zaidi:"
+  );
+
+  if (newPassword === null) {
+    return;
+  }
+
+  if (newPassword.length < 8) {
+    alert("Password lazima iwe na herufi 8 au zaidi.");
+    return;
+  }
+
+  if (newPassword.length > 128) {
+    alert("Password imezidi urefu unaoruhusiwa.");
+    return;
+  }
+
+  if (!confirm("Unathibitisha kubadilisha password ya akaunti hii?")) {
+    return;
+  }
+
+  try {
+    await requestJSON(
+      "/api/users/" + encodeURIComponent(id) + "/password",
+      {
+        method: "PATCH",
+        body: JSON.stringify({ newPassword })
+      }
+    );
+
+    document.getElementById("dashboardMessage").textContent =
+      "Password imebadilishwa kikamilifu.";
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
