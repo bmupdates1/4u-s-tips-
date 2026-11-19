@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="sw">
 <head>
@@ -131,16 +130,40 @@ label{display:block;margin-top:12px}
 <p id="publishMessage" class="message"></p>
 </div>
 
+<!-- ACTIVE BOOKING SLIPS -->
 <div class="panel">
-<h2 class="active-heading">ACTIVE BOOKING SLIPS</h2>
+<details class="tip-group">
+<summary class="active-heading">🟢 ACTIVE BOOKING SLIPS</summary>
 <p class="message">Booking Slips ambazo muda wa Kick-Off bado haujafika.</p>
-<div id="myActiveSlips">Login kwanza...</div>
+
+<details class="tip-group">
+<summary class="free-title">🟢 FREE BOOKING SLIPS (<span id="activeFreeCount">0</span>)</summary>
+<div id="myActiveFreeSlips">Login kwanza...</div>
+</details>
+
+<details class="tip-group">
+<summary class="premium-title">🔒 PREMIUM BOOKING SLIPS (<span id="activePremiumCount">0</span>)</summary>
+<div id="myActivePremiumSlips">Login kwanza...</div>
+</details>
+</details>
 </div>
 
+<!-- BOOKING SLIP HISTORY -->
 <div class="panel">
-<h2 class="history-heading">BOOKING SLIP HISTORY</h2>
+<details class="tip-group">
+<summary class="history-heading">📜 BOOKING SLIP HISTORY</summary>
 <p class="message">Slips zilizofikia muda wa Kick-Off zitahifadhiwa hapa pamoja na booking codes zake.</p>
-<div id="mySlipHistory">History itaonekana hapa...</div>
+
+<details class="tip-group">
+<summary class="free-title">🟢 FREE BOOKING SLIPS (<span id="historyFreeCount">0</span>)</summary>
+<div id="myHistoryFreeSlips">History itaonekana hapa...</div>
+</details>
+
+<details class="tip-group">
+<summary class="premium-title">🔒 PREMIUM BOOKING SLIPS (<span id="historyPremiumCount">0</span>)</summary>
+<div id="myHistoryPremiumSlips">History itaonekana hapa...</div>
+</details>
+</details>
 </div>
 </section>
 </main>
@@ -534,39 +557,42 @@ function createSlipCard(slip,isHistory){
   const status=document.createElement("p");
   status.className="locked";
   status.textContent="HISTORY - KICK-OFF TIME REACHED";
-  card.appendChild(status);
- }else{
-  const status=document.createElement("p");
-  status.className="started";
-  status.textContent="ACTIVE - AUTOMATIC COUNTDOWN";
-
-  const countdown=document.createElement("div");
-  countdown.className="countdown";
-
-  card.append(status,countdown,createDeleteButton("slip",slip.id));
-
-  return{
-   card,
-   countdown,
-   kickoffTime:slip.kickoffAt?new Date(slip.kickoffAt).getTime():null
-  };
+  card.append(status,createDeleteButton("slip",slip.id));
+  return{card};
  }
 
- card.appendChild(createDeleteButton("slip",slip.id));
- return{card};
+ const status=document.createElement("p");
+ status.className="started";
+ status.textContent="ACTIVE - AUTOMATIC COUNTDOWN";
+
+ const countdown=document.createElement("div");
+ countdown.className="countdown";
+
+ card.append(status,countdown,createDeleteButton("slip",slip.id));
+
+ return{
+  card,
+  countdown,
+  kickoffTime:slip.kickoffAt?new Date(slip.kickoffAt).getTime():null
+ };
 }
 
 async function loadMySlips(){
  if(slipsLoading)return;
 
- const activeList=document.getElementById("myActiveSlips");
- const historyList=document.getElementById("mySlipHistory");
- if(!activeList||!historyList)return;
+ const activeFree=document.getElementById("myActiveFreeSlips");
+ const activePremium=document.getElementById("myActivePremiumSlips");
+ const historyFree=document.getElementById("myHistoryFreeSlips");
+ const historyPremium=document.getElementById("myHistoryPremiumSlips");
+
+ if(!activeFree||!activePremium||!historyFree||!historyPremium)return;
 
  slipsLoading=true;
  countdownRefreshInProgress=false;
- activeList.textContent="Loading...";
- historyList.textContent="Loading...";
+
+ [activeFree,activePremium,historyFree,historyPremium].forEach(el=>{
+  el.textContent="Loading...";
+ });
 
  if(countdownTimer){
   clearInterval(countdownTimer);
@@ -577,63 +603,75 @@ async function loadMySlips(){
   const result=await request("/api/slips/mine");
   const slips=result.slips||[];
 
-  activeList.innerHTML="";
-  historyList.innerHTML="";
+  const groups={
+   activeFree:[],
+   activePremium:[],
+   historyFree:[],
+   historyPremium:[]
+  };
 
-  if(!slips.length){
-   activeList.innerHTML='<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
-   historyList.innerHTML='<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
-   return;
-  }
-
-  const countdownEntries=[];
-  const activeSlips=[];
-  const historySlips=[];
   const now=serverNow();
 
   slips.forEach(slip=>{
-   const kickoffTime=slip.kickoffAt?new Date(slip.kickoffAt).getTime():null;
+   const kickoffTime=slip.kickoffAt
+    ?new Date(slip.kickoffAt).getTime()
+    :null;
+
    const hasReachedKickoff=kickoffTime!==null&&
-    (!Number.isFinite(kickoffTime)||kickoffTime<=now);
-   const isHistory=slip.isLocked===true||
-    slip.isPublished===false||
-    hasReachedKickoff;
+    Number.isFinite(kickoffTime)&&kickoffTime<=now;
 
-   if(isHistory)historySlips.push(slip);
-   else activeSlips.push(slip);
+   // isLocked si kipimo cha kuamua kama slip imeingia History.
+   const isHistory=slip.isPublished===false||hasReachedKickoff;
+
+   const category=String(slip.category||"FREE").toUpperCase()==="PREMIUM"
+    ?"Premium"
+    :"Free";
+
+   const key=(isHistory?"history":"active")+category;
+   groups[key].push(slip);
   });
 
-  activeSlips.forEach(slip=>{
-   const item=createSlipCard(slip,false);
-   activeList.appendChild(item.card);
+  document.getElementById("activeFreeCount").textContent=groups.activeFree.length;
+  document.getElementById("activePremiumCount").textContent=groups.activePremium.length;
+  document.getElementById("historyFreeCount").textContent=groups.historyFree.length;
+  document.getElementById("historyPremiumCount").textContent=groups.historyPremium.length;
 
-   if(item.countdown&&Number.isFinite(item.kickoffTime)){
-    countdownEntries.push({
-     kickoffTime:item.kickoffTime,
-     element:item.countdown
-    });
-   }else if(item.countdown){
-    item.countdown.textContent="KICK-OFF HAJAWEKEWA";
+  const countdownEntries=[];
+
+  function renderGroup(items,list,isHistory){
+   list.innerHTML="";
+
+   if(!items.length){
+    list.innerHTML='<p class="empty-message">Hakuna Booking Slip katika kundi hili kwa sasa.</p>';
+    return;
    }
-  });
 
-  historySlips.forEach(slip=>{
-   const item=createSlipCard(slip,true);
-   historyList.appendChild(item.card);
-  });
+   items.forEach(slip=>{
+    const item=createSlipCard(slip,isHistory);
+    list.appendChild(item.card);
 
-  if(!activeSlips.length){
-   activeList.innerHTML='<p class="empty-message">Hakuna Booking Slip active kwa sasa.</p>';
+    if(!isHistory&&item.countdown&&Number.isFinite(item.kickoffTime)){
+     countdownEntries.push({
+      kickoffTime:item.kickoffTime,
+      element:item.countdown
+     });
+    }else if(!isHistory&&item.countdown){
+     item.countdown.textContent="KICK-OFF HAJAWEKEWA";
+    }
+   });
   }
-  if(!historySlips.length){
-   historyList.innerHTML='<p class="empty-message">Bado hakuna Booking Slip kwenye History.</p>';
-  }
+
+  renderGroup(groups.activeFree,activeFree,false);
+  renderGroup(groups.activePremium,activePremium,false);
+  renderGroup(groups.historyFree,historyFree,true);
+  renderGroup(groups.historyPremium,historyPremium,true);
 
   const updateCountdowns=()=>{
    let expired=false;
 
    countdownEntries.forEach(entry=>{
     const remaining=entry.kickoffTime-serverNow();
+
     if(remaining<=0){
      entry.element.textContent="KICK-OFF IMEFIKA!";
      expired=true;
@@ -644,21 +682,26 @@ async function loadMySlips(){
 
    if(expired&&!countdownRefreshInProgress){
     countdownRefreshInProgress=true;
+
     if(countdownTimer){
      clearInterval(countdownTimer);
      countdownTimer=null;
     }
+
     loadMySlips();
    }
   };
 
   updateCountdowns();
+
   if(countdownEntries.length){
    countdownTimer=setInterval(updateCountdowns,1000);
   }
+
  }catch(error){
-  activeList.textContent=error.message;
-  historyList.textContent=error.message;
+  [activeFree,activePremium,historyFree,historyPremium].forEach(el=>{
+   el.textContent=error.message;
+  });
  }finally{
   slipsLoading=false;
  }
@@ -688,8 +731,16 @@ function logout(){
  document.getElementById("myPremiumTips").textContent="Login kwanza...";
  document.getElementById("freeTipCount").textContent="0";
  document.getElementById("premiumTipCount").textContent="0";
- document.getElementById("myActiveSlips").textContent="Login kwanza...";
- document.getElementById("mySlipHistory").textContent="Login kwanza...";
+
+ document.getElementById("myActiveFreeSlips").textContent="Login kwanza...";
+ document.getElementById("myActivePremiumSlips").textContent="Login kwanza...";
+ document.getElementById("myHistoryFreeSlips").textContent="Login kwanza...";
+ document.getElementById("myHistoryPremiumSlips").textContent="Login kwanza...";
+
+ document.getElementById("activeFreeCount").textContent="0";
+ document.getElementById("activePremiumCount").textContent="0";
+ document.getElementById("historyFreeCount").textContent="0";
+ document.getElementById("historyPremiumCount").textContent="0";
 }
 </script>
 </body>
