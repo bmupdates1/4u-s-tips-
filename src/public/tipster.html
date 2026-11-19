@@ -27,14 +27,12 @@ button:disabled{opacity:.5;cursor:not-allowed}
 label{display:block;margin-top:12px}
 .free-title{color:#35d39a}
 .premium-title{color:#d4af37}
-.profile-preview{
- display:block;width:120px;height:120px;object-fit:cover;
- border-radius:50%;border:2px solid #d4af37;
- margin:12px auto;background:#071b15;
-}
+.profile-preview{display:block;width:120px;height:120px;object-fit:cover;border-radius:50%;border:2px solid #d4af37;margin:12px auto;background:#071b15}
 .history-heading{color:#ff9696}
 .active-heading{color:#72e6a1}
 .empty-message{color:#aaa;text-align:center;padding:12px}
+.delete-button{background:#a82020;color:white;border:1px solid #ff6969;margin-top:12px}
+.delete-button:hover{background:#d12d2d}
 </style>
 </head>
 
@@ -74,20 +72,15 @@ Chagua picha kutoka Gallery ya simu yako.
 Picha itaonekana kwenye Home Page na Profile yako.
 </p>
 
-<img
-id="profilePicturePreview"
+<img id="profilePicturePreview"
 class="profile-preview"
 alt="Profile picture preview"
-src="https://placehold.co/120x120/063b2b/d4af37?text=4U"
->
+src="https://placehold.co/120x120/063b2b/d4af37?text=4U">
 
 <label>Chagua picha kutoka Gallery</label>
-<input
-id="profilePictureFile"
-type="file"
+<input id="profilePictureFile" type="file"
 accept="image/jpeg,image/png,image/webp"
-onchange="previewProfilePicture()"
->
+onchange="previewProfilePicture()">
 
 <button onclick="uploadProfilePicture()">SAVE PROFILE PICTURE</button>
 <p id="profilePictureMessage" class="message"></p>
@@ -187,7 +180,6 @@ let currentUserId="";
 let serverOffset=0;
 let countdownTimer=null;
 
-/* PREVENT REPEATED SLIP REQUESTS */
 let slipsLoading=false;
 let countdownRefreshInProgress=false;
 
@@ -214,13 +206,13 @@ async function request(path,options={}){
  let data={};
 
  try{
-  data=JSON.parse(text);
+  data=text?JSON.parse(text):{};
  }catch{
   throw new Error("Server response: "+text.slice(0,200));
  }
 
  if(!response.ok){
-  throw new Error(data.error||"Request failed");
+  throw new Error(data.error||data.message||"Request failed");
  }
 
  return data;
@@ -228,6 +220,69 @@ async function request(path,options={}){
 
 function serverNow(){
  return Date.now()+serverOffset;
+}
+
+/* DELETE BUTTON */
+
+function createDeleteButton(type,id){
+
+ const button=document.createElement("button");
+
+ button.type="button";
+ button.className="delete-button";
+ button.textContent="DELETE";
+ button.onclick=()=>deleteItem(type,id,button);
+
+ return button;
+}
+
+/* DELETE MATCH TIP OR BOOKING SLIP */
+
+async function deleteItem(type,id,button){
+
+ if(!token||!id){
+  alert("Taarifa haijapatikana. Login tena.");
+  return;
+ }
+
+ const itemName=type==="tip"?"Match Tip":"Booking Slip";
+
+ const confirmed=window.confirm(
+  "Una uhakika unataka kufuta "+itemName+" hii?\n\nKitendo hiki hakiwezi kurudishwa."
+ );
+
+ if(!confirmed)return;
+
+ button.disabled=true;
+ button.textContent="DELETING...";
+
+ try{
+
+  const endpoint=type==="tip"
+   ?"/api/tips/"
+   :"/api/slips/";
+
+  await request(endpoint+encodeURIComponent(id),{
+   method:"DELETE"
+  });
+
+  alert(itemName+" imefutwa kikamilifu.");
+
+  if(type==="tip"){
+   await loadMyTips();
+  }else{
+   await loadMySlips();
+  }
+
+ }catch(error){
+
+  alert("Imeshindikana kufuta: "+error.message);
+
+  button.disabled=false;
+  button.textContent="DELETE";
+
+ }
+
 }
 
 /* LOGIN */
@@ -394,13 +449,7 @@ async function uploadProfilePicture(){
 
   const context=canvas.getContext("2d");
 
-  context.drawImage(
-   image,
-   0,
-   0,
-   canvas.width,
-   canvas.height
-  );
+  context.drawImage(image,0,0,canvas.width,canvas.height);
 
   const compressed=canvas.toDataURL("image/jpeg",0.78);
 
@@ -552,8 +601,8 @@ async function loadMyTips(){
    const category=document.createElement("p");
    category.textContent="Category: "+tip.category;
 
-   const result=document.createElement("p");
-   result.textContent="Result: "+tip.result;
+   const resultText=document.createElement("p");
+   resultText.textContent="Result: "+tip.result;
 
    const kickoff=document.createElement("p");
    kickoff.textContent=tip.kickoffAt
@@ -565,8 +614,9 @@ async function loadMyTips(){
     prediction,
     odds,
     category,
-    result,
-    kickoff
+    resultText,
+    kickoff,
+    createDeleteButton("tip",tip.id)
    );
 
    list.appendChild(card);
@@ -757,15 +807,7 @@ function createSlipCard(slip,isHistory){
   ?"Kick-Off: "+new Date(slip.kickoffAt).toLocaleString()
   :"Kick-Off: Not set";
 
- card.append(
-  title,
-  odds,
-  category,
-  price,
-  risk,
-  codes,
-  kickoff
- );
+ card.append(title,odds,category,price,risk,codes,kickoff);
 
  if(isHistory){
 
@@ -786,13 +828,19 @@ function createSlipCard(slip,isHistory){
 
   card.append(status,countdown);
 
+  card.appendChild(createDeleteButton("slip",slip.id));
+
   return {
    card,
    countdown,
-   kickoffTime:new Date(slip.kickoffAt).getTime()
+   kickoffTime:slip.kickoffAt
+    ?new Date(slip.kickoffAt).getTime()
+    :null
   };
 
  }
+
+ card.appendChild(createDeleteButton("slip",slip.id));
 
  return {card};
 
@@ -802,7 +850,6 @@ function createSlipCard(slip,isHistory){
 
 async function loadMySlips(){
 
- /* Zuia request nyingine wakati request ya kwanza inaendelea */
  if(slipsLoading)return;
 
  const activeList=document.getElementById("myActiveSlips");
@@ -884,6 +931,10 @@ async function loadMySlips(){
      element:item.countdown
     });
 
+   }else if(item.countdown){
+
+    item.countdown.textContent="KICK-OFF HAJAWEKEWA";
+
    }
 
   });
@@ -935,7 +986,6 @@ async function loadMySlips(){
 
    });
 
-   /* Refresh mara moja tu baada ya Kick-Off kufika */
    if(expired&&!countdownRefreshInProgress){
 
     countdownRefreshInProgress=true;
