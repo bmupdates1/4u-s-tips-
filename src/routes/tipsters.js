@@ -5,10 +5,9 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
-router.use(requireAuth);
-
 // UPDATE OWN PROFILE PICTURE
-router.patch("/me/profile-image", async (req, res) => {
+// Login is required for this action only.
+router.patch("/me/profile-image", requireAuth, async (req, res) => {
   try {
     if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
       return res.status(403).json({
@@ -53,7 +52,8 @@ router.patch("/me/profile-image", async (req, res) => {
 });
 
 // GET ALL TIPSTERS
-router.get("/", async (req, res) => {
+// Login is required because this endpoint checks who the user follows.
+router.get("/", requireAuth, async (req, res) => {
   try {
     const tipsters = await prisma.user.findMany({
       where: {
@@ -125,6 +125,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET SINGLE TIPSTER PROFILE
+// Public endpoint: customers do not need to log in to view a profile.
 router.get("/:id", async (req, res) => {
   try {
     const tipster = await prisma.user.findFirst({
@@ -153,6 +154,36 @@ router.get("/:id", async (req, res) => {
             result: true,
             kickoffAt: true,
             createdAt: true
+          }
+        },
+        slips: {
+          where: {
+            isPublished: true,
+            isLocked: false
+          },
+          orderBy: {
+            createdAt: "desc"
+          },
+          select: {
+            id: true,
+            title: true,
+            riskLabel: true,
+            totalOdds: true,
+            price: true,
+            category: true,
+            isPublished: true,
+            isLocked: true,
+            validityUntil: true,
+            kickoffAt: true,
+            kickoffStartedAt: true,
+            createdAt: true,
+            bookingCodes: {
+              select: {
+                id: true,
+                bookmaker: true,
+                code: true
+              }
+            }
           }
         }
       }
@@ -183,19 +214,10 @@ router.get("/:id", async (req, res) => {
 
     const decided = wins + losses;
 
-    const follow = await prisma.follow.findUnique({
-      where: {
-        followerId_tipsterId: {
-          followerId: req.user.id,
-          tipsterId: tipster.id
-        }
-      }
-    });
-
-    const isCustomer = req.user.role === "CUSTOMER";
-
+    // Public visitors are treated as customers.
+    // Premium match predictions and odds must remain hidden.
     const visibleTips = tipster.tips.map(tip => {
-      if (isCustomer && tip.category === "PREMIUM") {
+      if (tip.category === "PREMIUM") {
         return {
           id: tip.id,
           matchName: tip.matchName,
@@ -215,6 +237,23 @@ router.get("/:id", async (req, res) => {
       };
     });
 
+    // FREE booking codes are visible.
+    // PREMIUM booking codes are never sent to public visitors.
+    const visibleSlips = tipster.slips.map(slip => {
+      if (slip.category === "PREMIUM") {
+        return {
+          ...slip,
+          bookingCodes: [],
+          isLocked: true
+        };
+      }
+
+      return {
+        ...slip,
+        isLocked: false
+      };
+    });
+
     return res.json({
       tipster: {
         id: tipster.id,
@@ -226,13 +265,14 @@ router.get("/:id", async (req, res) => {
         accuracy: decided > 0
           ? Number(((wins / decided) * 100).toFixed(2))
           : 0,
-        isFollowing: Boolean(follow),
-        tips: visibleTips
+        isFollowing: false,
+        tips: visibleTips,
+        slips: visibleSlips
       }
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Load tipster profile error:", error);
 
     return res.status(500).json({
       error: "Could not load tipster profile"
