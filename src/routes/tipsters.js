@@ -1,7 +1,6 @@
-
-const express = require("express");
-const prisma = require("../lib/prisma");
-const { requireAuth } = require("../middleware/auth");
+import express from "express";
+import { prisma } from "../db.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -35,7 +34,6 @@ router.patch("/me/profile-image", requireAuth, async (req, res) => {
       });
     }
 
-    // Inakubali profileImage na image kwa compatibility.
     const image = req.body.profileImage || req.body.image;
 
     if (
@@ -221,8 +219,7 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    // Takwimu zinahesabu rekodi zote, hata zilizofichwa
-    // kwenye ukurasa wa profile.
+    // Takwimu zinahesabu rekodi zote.
     const [tipResults, slipResults] = await Promise.all([
       prisma.tip.findMany({
         where: {
@@ -245,8 +242,7 @@ router.get("/:id", async (req, res) => {
 
     const stats = calculateStats(tipResults, slipResults);
 
-    // Profile ni ukurasa unaoweza kutazamwa bila login.
-    // Wageni na wateja hawapaswi kuona Premium content.
+    // Wageni na wateja hawaoni Premium content.
     const canViewPremium = ["TIPSTER", "SUPER_ADMIN"].includes(
       req.user?.role
     );
@@ -301,4 +297,4 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
