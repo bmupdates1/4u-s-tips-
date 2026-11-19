@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="sw">
 <head>
@@ -52,6 +53,27 @@ main{
 .profile h2{margin-bottom:5px}
 
 .muted{color:#b7c9bf}
+
+.stats{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:10px;
+ margin-top:16px;
+}
+
+.stat{
+ background:#071b15;
+ border:1px solid #315644;
+ border-radius:9px;
+ padding:12px;
+}
+
+.stat strong{
+ display:block;
+ color:#35d39a;
+ font-size:22px;
+ margin-top:5px;
+}
 
 .tip{
  background:#071b15;
@@ -122,11 +144,41 @@ main{
  text-align:center;
 }
 
+.result{
+ display:inline-block;
+ padding:7px 12px;
+ border-radius:7px;
+ font-weight:bold;
+ margin:8px 0;
+}
+
+.result-won{
+ background:#0c5639;
+ color:#58f0ad;
+ border:1px solid #35d39a;
+}
+
+.result-lost{
+ background:#5b2020;
+ color:#ffaaaa;
+ border:1px solid #d45b5b;
+}
+
+.result-pending{
+ background:#3b3218;
+ color:#f2d477;
+ border:1px solid #d4af37;
+}
+
 a.back{
  display:inline-block;
  color:#d4af37;
  text-decoration:none;
  margin-bottom:15px;
+}
+
+@media(max-width:420px){
+ .stats{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
@@ -143,6 +195,7 @@ a.back{
 <a class="back" href="/">← BACK TO HOME</a>
 
 <section class="panel profile">
+
 <img
  id="profileImage"
  src="https://placehold.co/125x125/063b2b/d4af37?text=4U"
@@ -155,10 +208,32 @@ a.back{
 4U'S TIPS Tipster
 </p>
 
-<p class="muted" id="tipsterStats"></p>
+<div class="stats">
+
+ <div class="stat">
+  Wins
+  <strong id="wins">0</strong>
+ </div>
+
+ <div class="stat">
+  Losses
+  <strong id="losses">0</strong>
+ </div>
+
+ <div class="stat">
+  Winning Accuracy
+  <strong id="accuracy">0%</strong>
+ </div>
+
+ <div class="stat">
+  Followers
+  <strong id="followers">0</strong>
+ </div>
+
+</div>
+
 </section>
 
-<!-- FREE BOOKING CODES: ZIMEFUNGWA MWANZO -->
 <section class="panel">
 <details class="tip-group">
 
@@ -171,7 +246,6 @@ a.back{
 </details>
 </section>
 
-<!-- PREMIUM BOOKING CODES: ZIMEFUNGWA MWANZO -->
 <section class="panel">
 <details class="tip-group">
 
@@ -184,7 +258,6 @@ a.back{
 </details>
 </section>
 
-<!-- MATCH TIPS -->
 <section class="panel">
 
 <h2>MATCH TIPS ⚽</h2>
@@ -231,7 +304,6 @@ function safeText(value,fallback=""){
 
 function addText(parent,tag,text,className){
  const node=document.createElement(tag);
-
  node.textContent=text;
 
  if(className){
@@ -239,14 +311,11 @@ function addText(parent,tag,text,className){
  }
 
  parent.appendChild(node);
-
  return node;
 }
 
 async function getJSON(path){
-
  const response=await fetch(API+path);
-
  const text=await response.text();
 
  let data={};
@@ -269,7 +338,6 @@ async function getJSON(path){
 }
 
 function formatDate(value){
-
  if(!value)return "Not set";
 
  const date=new Date(value);
@@ -279,11 +347,33 @@ function formatDate(value){
  return date.toLocaleString();
 }
 
+function showResult(parent,result){
+ let label="PENDING";
+ let className="result-pending";
+
+ if(result==="WON"){
+  label="WON";
+  className="result-won";
+ }else if(result==="LOST"){
+  label="LOST";
+  className="result-lost";
+ }else if(result==="VOID"){
+  label="VOID";
+ }
+
+ const badge=addText(
+  parent,
+  "span",
+  "RESULT: "+label,
+  "result "+className
+ );
+
+ return badge;
+}
+
 // COUNTDOWN YA BOOKING CODES
 function updateBookingCountdowns(){
-
  document.querySelectorAll(".countdown").forEach(item=>{
-
   const kickoff=item.dataset.kickoff;
 
   if(!kickoff){
@@ -295,19 +385,10 @@ function updateBookingCountdowns(){
    new Date(kickoff).getTime()-Date.now();
 
   if(difference<=0){
-
    const card=item.closest(".booking-code");
 
-   const target=card?card.parentElement:null;
-
-   if(card)card.remove();
-
-   if(target && !target.querySelector(".booking-code")){
-
-    target.textContent=
-     "Hakuna Booking Codes katika kundi hili kwa sasa.";
-
-    target.className="empty";
+   if(card){
+    card.remove();
    }
 
    return;
@@ -333,13 +414,11 @@ function updateBookingCountdowns(){
    hours+"h "+
    minutes+"m "+
    seconds+"s";
-
  });
 }
 
 // KUONYESHA BOOKING CODES
 function renderBookingCodes(slips,category,target){
-
  target.innerHTML="";
 
  const matching=slips.filter(
@@ -347,21 +426,17 @@ function renderBookingCodes(slips,category,target){
  );
 
  if(!matching.length){
-
   target.textContent=
    "Hakuna Booking Codes katika kundi hili kwa sasa.";
 
   target.className="empty";
-
   return;
  }
 
  target.className="";
 
  matching.forEach(slip=>{
-
   const card=document.createElement("div");
-
   card.className="booking-code";
 
   addText(
@@ -382,18 +457,22 @@ function renderBookingCodes(slips,category,target){
    "Kick-Off: "+formatDate(slip.kickoffAt)
   );
 
+  addText(
+   card,
+   "p",
+   "Valid Until: "+formatDate(slip.validityUntil)
+  );
+
+  showResult(card,slip.result);
+
   const countdown=document.createElement("div");
-
   countdown.className="countdown";
-
   countdown.dataset.kickoff=slip.kickoffAt||"";
 
   card.appendChild(countdown);
 
   if(category==="PREMIUM"){
-
    const locked=document.createElement("div");
-
    locked.className="premium-lock";
 
    addText(
@@ -411,44 +490,29 @@ function renderBookingCodes(slips,category,target){
    card.appendChild(locked);
 
   }else{
-
    const codes=slip.bookingCodes||[];
 
    if(codes.length){
-
     codes.forEach(code=>{
-
      const row=document.createElement("p");
 
      row.textContent=
       safeText(code.bookmaker,"Bookmaker")+": ";
 
      const value=document.createElement("span");
-
      value.className="code-value";
-
-     value.textContent=
-      safeText(code.code,"Code haipo");
+     value.textContent=safeText(code.code,"Code haipo");
 
      row.appendChild(value);
-
      card.appendChild(row);
-
     });
 
    }else{
-
-    addText(
-     card,
-     "p",
-     "Booking code haijawekwa."
-    );
-
+    addText(card,"p","Booking code haijawekwa.");
    }
   }
 
   target.appendChild(card);
-
  });
 
  updateBookingCountdowns();
@@ -456,48 +520,29 @@ function renderBookingCodes(slips,category,target){
 
 // KUONYESHA MATCH TIPS
 function renderMatchTips(tips){
-
- const free=tips.filter(
-  tip=>tip.category==="FREE"
- );
-
- const premium=tips.filter(
-  tip=>tip.category==="PREMIUM"
- );
+ const free=tips.filter(tip=>tip.category==="FREE");
+ const premium=tips.filter(tip=>tip.category==="PREMIUM");
 
  element("freeTipCount").textContent=free.length;
-
  element("premiumTipCount").textContent=premium.length;
 
  const freeTarget=element("freeTips");
-
  const premiumTarget=element("premiumTips");
 
  freeTarget.innerHTML="";
-
  premiumTarget.innerHTML="";
 
  if(!free.length){
-
   freeTarget.textContent="Hakuna FREE TIPS kwa sasa.";
-
   freeTarget.className="empty";
-
  }else{
-
   freeTarget.className="";
 
   free.forEach(tip=>{
-
    const card=document.createElement("div");
-
    card.className="tip";
 
-   addText(
-    card,
-    "h3",
-    safeText(tip.matchName,"Match")
-   );
+   addText(card,"h3",safeText(tip.matchName,"Match"));
 
    addText(
     card,
@@ -517,69 +562,67 @@ function renderMatchTips(tips){
     "Kick-Off: "+formatDate(tip.kickoffAt)
    );
 
-   card.appendChild(
-    document.createTextNode("🟢 FREE TIP")
+   addText(
+    card,
+    "p",
+    "Valid Until: "+formatDate(tip.validityUntil)
    );
 
-   freeTarget.appendChild(card);
+   showResult(card,tip.result);
 
+   addText(card,"p","🟢 FREE TIP");
+
+   freeTarget.appendChild(card);
   });
  }
 
  if(!premium.length){
-
-  premiumTarget.textContent=
-   "Hakuna PREMIUM TIPS kwa sasa.";
-
+  premiumTarget.textContent="Hakuna PREMIUM TIPS kwa sasa.";
   premiumTarget.className="empty";
-
  }else{
-
   premiumTarget.className="";
 
   premium.forEach(tip=>{
-
    const card=document.createElement("div");
-
    card.className="tip";
 
-   addText(
-    card,
-    "h3",
-    safeText(tip.matchName,"Match")
-   );
+   addText(card,"h3",safeText(tip.matchName,"Match"));
 
    const lock=document.createElement("div");
-
    lock.className="premium-lock";
 
-   addText(
-    lock,
-    "p",
-    "🔒 PREMIUM TIP LOCKED"
-   );
+   addText(lock,"p","🔒 PREMIUM TIP LOCKED");
 
    addText(
     lock,
     "p",
-    "Prediction na Odds zimefungwa. Jiunge na Premium ili kupata taarifa hizi."
+    "Prediction, Odds na matokeo vimefungwa. Jiunge na Premium ili kupata taarifa hizi."
    );
 
    card.appendChild(lock);
-
    premiumTarget.appendChild(card);
-
   });
  }
 }
 
+// TAKWIMU ZA TIPSTER
+function renderStats(stats,followersCount){
+ stats=stats||{};
+
+ element("wins").textContent=safeText(stats.wins,0);
+ element("losses").textContent=safeText(stats.losses,0);
+
+ element("accuracy").textContent=
+  safeText(stats.accuracy,0)+"%";
+
+ element("followers").textContent=
+  safeText(followersCount,0);
+}
+
 // KUPAKIA PROFILE
 async function loadProfile(){
-
  if(!tipsterId){
-
-  element("tipsterName").textContent=
-   "Tipster hajapatikana";
+  element("tipsterName").textContent="Tipster hajapatikana";
 
   element("tipsterDescription").textContent=
    "Profile ID haipo kwenye link.";
@@ -588,7 +631,6 @@ async function loadProfile(){
  }
 
  try{
-
   const result=await getJSON(
    "/api/tipsters/"+encodeURIComponent(tipsterId)
   );
@@ -602,18 +644,16 @@ async function loadProfile(){
    safeText(tipster.bio,"4U'S TIPS Tipster");
 
   if(tipster.profileImage){
-
-   element("profileImage").src=
-    tipster.profileImage;
-
+   element("profileImage").src=tipster.profileImage;
   }
 
   const tips=tipster.tips||[];
-
   const slips=tipster.slips||[];
 
-  element("tipsterStats").textContent=
-   tips.length+" Match Tips";
+  renderStats(
+   tipster.stats,
+   tipster.followersCount
+  );
 
   renderMatchTips(tips);
 
@@ -630,7 +670,6 @@ async function loadProfile(){
   );
 
  }catch(error){
-
   element("tipsterName").textContent=
    "Imeshindikana kupakia Profile";
 
@@ -638,24 +677,16 @@ async function loadProfile(){
    error.message;
 
   element("freeTips").textContent=error.message;
-
   element("premiumTips").textContent=error.message;
 
-  element("freeBookingCodes").textContent=
-   error.message;
-
-  element("premiumBookingCodes").textContent=
-   error.message;
-
+  element("freeBookingCodes").textContent=error.message;
+  element("premiumBookingCodes").textContent=error.message;
  }
 }
 
-// COUNTDOWN HUJIRUDIA KILA SEKUNDE
 setInterval(updateBookingCountdowns,1000);
 
-// ANZA KUPAKIA PROFILE
 loadProfile();
-
 </script>
 
 </body>
