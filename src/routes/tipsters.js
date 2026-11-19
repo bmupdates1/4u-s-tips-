@@ -1,18 +1,23 @@
+
 import express from "express";
 import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Helper: kuhesabu matokeo ya Tips na Slips pamoja.
+// =====================================
+// HELPER: CALCULATE TIPSTER STATISTICS
+// =====================================
+
 function calculateStats(tips = [], slips = []) {
   const allResults = [
     ...tips.map(item => item.result),
     ...slips.map(item => item.result)
   ];
 
-  const wins = allResults.filter(result => result === "WON").length;
-  const losses = allResults.filter(result => result === "LOST").length;
+  const wins = allResults.filter(r => r === "WON").length;
+  const losses = allResults.filter(r => r === "LOST").length;
+
   const total = wins + losses;
 
   return {
@@ -25,7 +30,10 @@ function calculateStats(tips = [], slips = []) {
   };
 }
 
-// PICHA YA PROFILE YA TIPSTER
+// =====================================
+// UPDATE PROFILE IMAGE
+// =====================================
+
 router.patch("/me/profile-image", requireAuth, async (req, res) => {
   try {
     if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
@@ -38,28 +46,22 @@ router.patch("/me/profile-image", requireAuth, async (req, res) => {
 
     if (
       typeof image !== "string" ||
-      !/^data:image\/(jpeg|png|webp);base64,/.test(image)
+      !/^data:image\/(jpeg|png|webp);base64,/i.test(image)
     ) {
       return res.status(400).json({
         message: "Picha haikubaliki."
       });
     }
 
-    const size = Buffer.byteLength(image, "utf8");
-
-    if (size > 1.5 * 1024 * 1024) {
+    if (Buffer.byteLength(image, "utf8") > 1.5 * 1024 * 1024) {
       return res.status(400).json({
         message: "Picha imezidi 1.5MB."
       });
     }
 
     const user = await prisma.user.update({
-      where: {
-        id: req.user.id
-      },
-      data: {
-        profileImage: image
-      },
+      where: { id: req.user.id },
+      data: { profileImage: image },
       select: {
         id: true,
         username: true,
@@ -67,56 +69,65 @@ router.patch("/me/profile-image", requireAuth, async (req, res) => {
       }
     });
 
-    res.json({
+    return res.json({
       message: "Picha imehifadhiwa.",
       user,
       tipster: user,
       profileImage: user.profileImage
     });
+
   } catch (error) {
     console.error("PROFILE IMAGE ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kuhifadhi picha."
     });
   }
 });
 
-// ORODHA YA TIPSTERS PAMOJA NA TAKWIMU
+// =====================================
+// GET ALL ACTIVE TIPSTERS
+// =====================================
+
 router.get("/", async (req, res) => {
   try {
+    console.log("Loading active tipsters...");
+
     const tipsters = await prisma.user.findMany({
       where: {
         role: "TIPSTER",
         status: "ACTIVE"
       },
+
       select: {
         id: true,
         username: true,
         profileImage: true,
         createdAt: true,
+
         followers: {
-          select: {
-            id: true
-          }
+          select: { id: true }
         },
+
         tips: {
-          select: {
-            result: true
-          }
+          select: { result: true }
         },
+
         slips: {
-          select: {
-            result: true
-          }
+          select: { result: true }
         }
       },
+
       orderBy: {
         createdAt: "desc"
       }
     });
 
     const results = tipsters.map(tipster => {
-      const stats = calculateStats(tipster.tips, tipster.slips);
+      const stats = calculateStats(
+        tipster.tips,
+        tipster.slips
+      );
 
       return {
         id: tipster.id,
@@ -128,16 +139,26 @@ router.get("/", async (req, res) => {
       };
     });
 
-    res.json(results);
+    console.log("TIPSTERS FOUND:", results.length);
+
+    return res.status(200).json(results);
+
   } catch (error) {
     console.error("GET TIPSTERS ERROR:", error);
-    res.status(500).json({
-      message: "Imeshindikana kupata Tipsters."
+
+    return res.status(500).json({
+      message: "Imeshindikana kupata Tipsters.",
+      error: process.env.NODE_ENV === "production"
+        ? undefined
+        : error.message
     });
   }
 });
 
-// PROFILE YA TIPSTER MMOJA
+// =====================================
+// GET SINGLE TIPSTER PROFILE
+// =====================================
+
 router.get("/:id", async (req, res) => {
   try {
     const tipster = await prisma.user.findFirst({
@@ -146,6 +167,7 @@ router.get("/:id", async (req, res) => {
         role: "TIPSTER",
         status: "ACTIVE"
       },
+
       select: {
         id: true,
         username: true,
@@ -153,9 +175,7 @@ router.get("/:id", async (req, res) => {
         createdAt: true,
 
         followers: {
-          select: {
-            id: true
-          }
+          select: { id: true }
         },
 
         tips: {
@@ -163,6 +183,7 @@ router.get("/:id", async (req, res) => {
             createdAt: "desc"
           },
           take: 100,
+
           select: {
             id: true,
             matchName: true,
@@ -185,10 +206,13 @@ router.get("/:id", async (req, res) => {
               { kickoffAt: { gt: new Date() } }
             ]
           },
+
           orderBy: {
             createdAt: "desc"
           },
+
           take: 100,
+
           select: {
             id: true,
             title: true,
@@ -201,6 +225,7 @@ router.get("/:id", async (req, res) => {
             kickoffAt: true,
             kickoffStartedAt: true,
             createdAt: true,
+
             bookingCodes: {
               select: {
                 id: true,
@@ -219,33 +244,29 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    // Takwimu zinahesabu rekodi zote.
+    // CALCULATE ALL RESULTS
     const [tipResults, slipResults] = await Promise.all([
       prisma.tip.findMany({
-        where: {
-          tipsterId: tipster.id
-        },
-        select: {
-          result: true
-        }
+        where: { tipsterId: tipster.id },
+        select: { result: true }
       }),
 
       prisma.slip.findMany({
-        where: {
-          tipsterId: tipster.id
-        },
-        select: {
-          result: true
-        }
+        where: { tipsterId: tipster.id },
+        select: { result: true }
       })
     ]);
 
-    const stats = calculateStats(tipResults, slipResults);
-
-    // Wageni na wateja hawaoni Premium content.
-    const canViewPremium = ["TIPSTER", "SUPER_ADMIN"].includes(
-      req.user?.role
+    const stats = calculateStats(
+      tipResults,
+      slipResults
     );
+
+    // PREMIUM ACCESS
+    const canViewPremium = [
+      "TIPSTER",
+      "SUPER_ADMIN"
+    ].includes(req.user?.role);
 
     const tips = tipster.tips.map(tip => {
       if (!canViewPremium && tip.category === "PREMIUM") {
@@ -279,7 +300,7 @@ router.get("/:id", async (req, res) => {
       };
     });
 
-    res.json({
+    return res.status(200).json({
       id: tipster.id,
       username: tipster.username,
       profileImage: tipster.profileImage,
@@ -289,9 +310,11 @@ router.get("/:id", async (req, res) => {
       tips,
       slips
     });
+
   } catch (error) {
     console.error("GET TIPSTER PROFILE ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kupata profile ya Tipster."
     });
   }
