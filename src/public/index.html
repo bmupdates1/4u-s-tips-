@@ -2,29 +2,40 @@
 <!DOCTYPE html>
 <html lang="sw">
 <head>
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#063b2b">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4U'S TIPS👑</title>
+<meta name="theme-color" content="#063b2b">
+
+<title>4U'S TIPS 👑</title>
+
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 
 <style>
 *{box-sizing:border-box}
+
 body{
  margin:0;
  font-family:Arial,sans-serif;
  background:#071b15;
  color:white;
 }
+
 header{
  background:#063b2b;
  border-bottom:2px solid #d4af37;
  padding:20px;
  text-align:center;
 }
+
 h1,h2{color:#d4af37}
-main{max-width:700px;margin:auto;padding:18px}
+
+main{
+ max-width:700px;
+ margin:auto;
+ padding:18px;
+}
+
 .panel{
  background:#102a21;
  border:1px solid #315644;
@@ -32,6 +43,7 @@ main{max-width:700px;margin:auto;padding:18px}
  padding:18px;
  margin-bottom:18px;
 }
+
 input,button{
  width:100%;
  padding:13px;
@@ -39,11 +51,13 @@ input,button{
  border-radius:7px;
  font-size:15px;
 }
+
 input{
  background:#071b15;
  color:white;
  border:1px solid #315644;
 }
+
 button{
  border:0;
  background:#d4af37;
@@ -51,19 +65,27 @@ button{
  font-weight:bold;
  cursor:pointer;
 }
+
 .secondary{
  background:#063b2b;
  color:white;
  border:1px solid #d4af37;
 }
+
 .hidden{display:none}
-.message,.stats{color:#d4af37;font-size:14px}
+
+.message,.stats{
+ color:#d4af37;
+ font-size:14px;
+}
+
 .tipster-card{
  display:flex;
  align-items:center;
  gap:13px;
  cursor:pointer;
 }
+
 .tip{
  background:#071b15;
  border:1px solid #315644;
@@ -71,6 +93,7 @@ button{
  padding:13px;
  margin:10px 0;
 }
+
 .avatar{
  width:65px;
  height:65px;
@@ -78,11 +101,17 @@ button{
  object-fit:cover;
  border:2px solid #d4af37;
 }
-.tipster-info{flex:1;min-width:0}
+
+.tipster-info{
+ flex:1;
+ min-width:0;
+}
+
 .tipster-info h3{
  margin:5px 0;
  color:#d4af37;
 }
+
 .profile-button{margin-top:8px}
 </style>
 </head>
@@ -92,6 +121,13 @@ button{
 <header>
 <h1>4U'S TIPS ⚽</h1>
 <p>PREDICT SMARTER</p>
+
+<button
+ id="languageButton"
+ class="secondary"
+ onclick="toggleLanguage()">
+ 🇹🇿 Kiswahili
+</button>
 </header>
 
 <main>
@@ -99,101 +135,243 @@ button{
 <section id="authSection">
 
 <div class="panel">
-<h2>Customer Login</h2>
+<h2 id="loginHeading">Ingia kwenye Akaunti</h2>
 
-<input id="loginUsername" placeholder="Username">
-<input id="loginPassword" type="password" placeholder="Password">
+<input
+ id="loginUsername"
+ placeholder="Jina la mtumiaji"
+ autocomplete="username">
 
-<button onclick="login()">Login</button>
+<input
+ id="loginPassword"
+ type="password"
+ placeholder="Nenosiri"
+ autocomplete="current-password">
+
+<button onclick="login()" id="loginButton">
+ Ingia
+</button>
 
 <p id="loginMessage" class="message"></p>
 </div>
 
 <div class="panel">
-<h2>Create Customer Account</h2>
+<h2 id="registerHeading">Tengeneza Akaunti</h2>
 
-<input id="registerUsername" placeholder="Choose username">
-<input id="registerEmail" type="email" placeholder="Email address">
-<input id="registerPassword" type="password" placeholder="Create password (12 characters minimum)">
+<input
+ id="registerUsername"
+ placeholder="Jina la mtumiaji"
+ autocomplete="username">
 
-<button onclick="register()">Register</button>
+<input
+ id="registerEmail"
+ type="email"
+ placeholder="Barua pepe"
+ autocomplete="email">
+
+<input
+ id="registerPassword"
+ type="password"
+ placeholder="Tengeneza nenosiri (angalau herufi 8)"
+ autocomplete="new-password">
+
+<button onclick="register()" id="registerButton">
+ Jisajili
+</button>
 
 <p id="registerMessage" class="message"></p>
 </div>
 
 </section>
 
-
 <section id="customerSection" class="hidden">
 
 <div class="panel">
-<h2 id="welcome">Welcome</h2>
+<h2 id="welcome">Karibu</h2>
 
-<button class="secondary" onclick="loadTipsters()">
-Refresh Tipsters
+<button
+ class="secondary"
+ onclick="loadTipsters()"
+ id="refreshButton">
+ Onyesha Tipsters Wapya
 </button>
 
-<button onclick="logout()">Logout</button>
+<button onclick="logout()" id="logoutButton">
+ Toka
+</button>
 </div>
 
-
 <div class="panel">
-<h2>👑 TOP TIPSTERS</h2>
+<h2 id="topHeading">👑 TIPSTERS BORA</h2>
 
-<p>
-Karibu 4U'S TIPS! Chagua Tipster unayempenda,
-mfanyie Follow na fungua profile yake kuona betting zake.
+<p id="description">
+ Karibu 4U'S TIPS! Chagua Tipster unayempenda,
+ mfanyie Follow na fungua profile yake kuona betting zake.
 </p>
 
 <div id="tipstersList">
-Loading tipsters...
+ Inatafuta Tipsters...
 </div>
-
 </div>
 
 </section>
 
 </main>
 
-
 <script>
+const API = window.location.origin;
 
-const API=window.location.origin;
+let token = sessionStorage.getItem("4u_customer_token") || "";
+let currentUsername = "";
 
-let token=sessionStorage.getItem("4u_customer_token")||"";
+let currentLanguage =
+ localStorage.getItem("4us_language") || "sw";
 
+if(currentLanguage !== "sw" && currentLanguage !== "en"){
+ currentLanguage = "sw";
+}
+
+const translations = {
+
+ sw:{
+  login:"Ingia kwenye Akaunti",
+  register:"Tengeneza Akaunti",
+  username:"Jina la mtumiaji",
+  email:"Barua pepe",
+  loginPassword:"Nenosiri",
+  password:"Tengeneza nenosiri (angalau herufi 8)",
+  loginBtn:"Ingia",
+  registerBtn:"Jisajili",
+  refresh:"Onyesha Tipsters Wapya",
+  logout:"Toka",
+  welcome:"Karibu",
+  top:"👑 TIPSTERS BORA",
+  description:"Karibu 4U'S TIPS! Chagua Tipster unayempenda, mfanyie Follow na fungua profile yake kuona betting zake.",
+  loading:"Inatafuta Tipsters...",
+  noTipsters:"Hakuna Tipsters waliopatikana kwa sasa.",
+  followers:"Wafuasi",
+  accuracy:"Usahihi wa ushindi",
+  wins:"Ushindi",
+  losses:"Vipigo",
+  follow:"Fuata",
+  unfollow:"Acha kumfuata",
+  profile:"Angalia Profile",
+  language:"🇹🇿 Kiswahili",
+  registerSuccess:"Akaunti imetengenezwa! Sasa unaweza kuingia.",
+  logoutSuccess:"Umetoka kwenye akaunti.",
+  customerOnly:"Tumia akaunti ya Customer."
+ },
+
+ en:{
+  login:"Customer Login",
+  register:"Create Customer Account",
+  username:"Username",
+  email:"Email address",
+  loginPassword:"Password",
+  password:"Create password (minimum 8 characters)",
+  loginBtn:"Login",
+  registerBtn:"Register",
+  refresh:"Refresh Tipsters",
+  logout:"Logout",
+  welcome:"Welcome",
+  top:"👑 TOP TIPSTERS",
+  description:"Welcome to 4U'S TIPS! Choose your favourite Tipster, follow them and view their betting tips.",
+  loading:"Loading tipsters...",
+  noTipsters:"No Tipsters found at the moment.",
+  followers:"Followers",
+  accuracy:"Winning Accuracy",
+  wins:"Wins",
+  losses:"Losses",
+  follow:"Follow",
+  unfollow:"Unfollow",
+  profile:"View Profile",
+  language:"🇬🇧 English",
+  registerSuccess:"Account created! You can now login.",
+  logoutSuccess:"You have logged out.",
+  customerOnly:"Please use a Customer account."
+ }
+
+};
+
+function applyLanguage(){
+
+ const t = translations[currentLanguage];
+
+ document.documentElement.lang = currentLanguage;
+
+ document.getElementById("loginHeading").textContent = t.login;
+ document.getElementById("registerHeading").textContent = t.register;
+
+ document.getElementById("loginUsername").placeholder = t.username;
+ document.getElementById("loginPassword").placeholder = t.loginPassword;
+
+ document.getElementById("registerUsername").placeholder = t.username;
+ document.getElementById("registerEmail").placeholder = t.email;
+ document.getElementById("registerPassword").placeholder = t.password;
+
+ document.getElementById("loginButton").textContent = t.loginBtn;
+ document.getElementById("registerButton").textContent = t.registerBtn;
+
+ document.getElementById("refreshButton").textContent = t.refresh;
+ document.getElementById("logoutButton").textContent = t.logout;
+
+ document.getElementById("topHeading").textContent = t.top;
+ document.getElementById("description").textContent = t.description;
+
+ document.getElementById("languageButton").textContent = t.language;
+
+ document.getElementById("welcome").textContent =
+  currentUsername ? t.welcome + ", " + currentUsername : t.welcome;
+
+ localStorage.setItem("4us_language",currentLanguage);
+}
+
+function toggleLanguage(){
+
+ currentLanguage = currentLanguage === "sw" ? "en" : "sw";
+
+ applyLanguage();
+
+ if(!document.getElementById("customerSection").classList.contains("hidden")){
+  loadTipsters();
+ }else{
+  document.getElementById("tipstersList").textContent =
+   translations[currentLanguage].loading;
+ }
+}
 
 async function request(path,options={}){
 
- const response=await fetch(API+path,{
+ const response = await fetch(API + path,{
   ...options,
   headers:{
    "Content-Type":"application/json",
-   ...(token?{"Authorization":"Bearer "+token}:{})
+   ...(token ? {"Authorization":"Bearer "+token} : {}),
+   ...(options.headers || {})
   }
  });
 
- const text=await response.text();
+ const text = await response.text();
 
- let data={};
+ let data = {};
 
  try{
-  data=JSON.parse(text);
+  data = JSON.parse(text);
  }catch{
-  throw new Error("Server response: "+text.slice(0,200));
+  throw new Error("Server response: " + text.slice(0,200));
  }
 
  if(!response.ok){
-  throw new Error(data.error||"HTTP Error "+response.status);
+  throw new Error(data.error || "HTTP Error " + response.status);
  }
 
  return data;
 }
 
-
 async function register(){
 
- const message=document.getElementById("registerMessage");
+ const message = document.getElementById("registerMessage");
+ message.textContent = "";
 
  try{
 
@@ -206,24 +384,22 @@ async function register(){
    })
   });
 
-  message.textContent="Account imetengenezwa! Sasa unaweza Login.";
+  message.textContent =
+   translations[currentLanguage].registerSuccess;
 
  }catch(error){
-
-  message.textContent=error.message;
-
+  message.textContent = error.message;
  }
-
 }
-
 
 async function login(){
 
- const message=document.getElementById("loginMessage");
+ const message = document.getElementById("loginMessage");
+ message.textContent = "";
 
  try{
 
-  const result=await request("/api/auth/login",{
+  const result = await request("/api/auth/login",{
    method:"POST",
    body:JSON.stringify({
     username:document.getElementById("loginUsername").value.trim(),
@@ -231,206 +407,160 @@ async function login(){
    })
   });
 
-  token=result.token;
-
+  token = result.token;
   sessionStorage.setItem("4u_customer_token",token);
 
-  const me=await request("/api/auth/me");
+  const me = await request("/api/auth/me");
 
-  if(me.user.role!=="CUSTOMER"){
-   throw new Error("Tumia akaunti ya Customer.");
+  if(me.user.role !== "CUSTOMER"){
+   throw new Error(translations[currentLanguage].customerOnly);
   }
 
   showCustomer(me.user.username);
 
  }catch(error){
 
-  token="";
+  token = "";
   sessionStorage.removeItem("4u_customer_token");
 
-  message.textContent=error.message;
-
+  message.textContent = error.message;
  }
-
 }
-
 
 function showCustomer(username){
 
- document.getElementById("authSection").classList.add("hidden");
+ currentUsername = username;
 
+ document.getElementById("authSection").classList.add("hidden");
  document.getElementById("customerSection").classList.remove("hidden");
 
- document.getElementById("welcome").textContent="Welcome, "+username;
-
+ applyLanguage();
  loadTipsters();
-
 }
-
 
 async function loadTipsters(){
 
- const list=document.getElementById("tipstersList");
+ const list = document.getElementById("tipstersList");
+ const t = translations[currentLanguage];
 
- list.textContent="Loading tipsters...";
+ list.textContent = t.loading;
 
  try{
 
-  const result=await request("/api/tipsters");
+  const result = await request("/api/tipsters");
+  const tipsters = result.tipsters || [];
 
-  const tipsters=result.tipsters||[];
-
-  list.innerHTML="";
+  list.innerHTML = "";
 
   if(!tipsters.length){
-
-   list.textContent="Hakuna Tipsters waliopatikana kwa sasa.";
-
+   list.textContent = t.noTipsters;
    return;
-
   }
 
   tipsters.forEach(tipster=>{
 
-   const card=document.createElement("div");
+   const card = document.createElement("div");
+   card.className = "tip";
 
-   card.className="tip";
+   const row = document.createElement("div");
+   row.className = "tipster-card";
+   row.onclick = ()=>openTipster(tipster.id);
 
-   const row=document.createElement("div");
+   const img = document.createElement("img");
+   img.className = "avatar";
+   img.src = tipster.profileImage ||
+    "https://placehold.co/100x100/063b2b/d4af37?text=4U";
 
-   row.className="tipster-card";
+   img.alt = "Tipster profile";
 
-   row.onclick=()=>openTipster(tipster.id);
-
-
-   const img=document.createElement("img");
-
-   img.className="avatar";
-
-   img.src=tipster.profileImage||"https://placehold.co/100x100/063b2b/d4af37?text=4U";
-
-   img.alt="Tipster profile";
-
-   img.onerror=()=>{
-
-    img.onerror=null;
-
-    img.src="https://placehold.co/100x100/063b2b/d4af37?text=4U";
-
+   img.onerror = ()=>{
+    img.onerror = null;
+    img.src = "https://placehold.co/100x100/063b2b/d4af37?text=4U";
    };
 
+   const info = document.createElement("div");
+   info.className = "tipster-info";
 
-   const info=document.createElement("div");
+   const name = document.createElement("h3");
+   name.textContent = tipster.username;
 
-   info.className="tipster-info";
+   const followers = document.createElement("p");
+   followers.className = "stats";
+   followers.textContent = t.followers + ": " + tipster.followers;
 
+   const accuracy = document.createElement("p");
+   accuracy.textContent = t.accuracy + ": " + tipster.accuracy + "%";
 
-   const name=document.createElement("h3");
-
-   name.textContent=tipster.username;
-
-
-   const followers=document.createElement("p");
-
-   followers.className="stats";
-
-   followers.textContent="Followers: "+tipster.followers;
-
-
-   const accuracy=document.createElement("p");
-
-   accuracy.textContent="Winning Accuracy: "+tipster.accuracy+"%";
-
-
-   const wins=document.createElement("p");
-
-   wins.textContent="Wins: "+tipster.wins+" | Losses: "+tipster.losses;
-
+   const wins = document.createElement("p");
+   wins.textContent =
+    t.wins + ": " + tipster.wins +
+    " | " + t.losses + ": " + tipster.losses;
 
    info.append(name,followers,accuracy,wins);
-
    row.append(img,info);
 
+   const followButton = document.createElement("button");
 
-   const followButton=document.createElement("button");
+   followButton.textContent =
+    tipster.isFollowing ? t.unfollow : t.follow;
 
-   followButton.textContent=tipster.isFollowing?"Unfollow":"Follow";
-
-   followButton.onclick=(event)=>{
-
+   followButton.onclick = (event)=>{
     event.stopPropagation();
-
     changeFollow(tipster.id,tipster.isFollowing);
-
    };
 
-
-   const profileButton=document.createElement("button");
-
-   profileButton.className="secondary profile-button";
-
-   profileButton.textContent="View Profile";
-
-   profileButton.onclick=()=>openTipster(tipster.id);
-
+   const profileButton = document.createElement("button");
+   profileButton.className = "secondary profile-button";
+   profileButton.textContent = t.profile;
+   profileButton.onclick = ()=>openTipster(tipster.id);
 
    card.append(row,followButton,profileButton);
-
    list.appendChild(card);
 
   });
 
  }catch(error){
-
-  list.textContent=error.message;
-
+  list.textContent = error.message;
  }
-
 }
-
 
 function openTipster(id){
 
- window.location.href="tipster-profile.html?id="+encodeURIComponent(id);
-
+ window.location.href =
+  "tipster-profile.html?id=" + encodeURIComponent(id);
 }
-
 
 async function changeFollow(id,isFollowing){
 
  try{
 
-  await request("/api/follows/"+encodeURIComponent(id),{
-   method:isFollowing?"DELETE":"POST"
+  await request("/api/follows/" + encodeURIComponent(id),{
+   method:isFollowing ? "DELETE" : "POST"
   });
 
   await loadTipsters();
 
  }catch(error){
-
   alert(error.message);
-
  }
-
 }
-
 
 function logout(){
 
- token="";
+ token = "";
+ currentUsername = "";
 
  sessionStorage.removeItem("4u_customer_token");
 
  document.getElementById("customerSection").classList.add("hidden");
-
  document.getElementById("authSection").classList.remove("hidden");
 
- document.getElementById("loginPassword").value="";
+ document.getElementById("loginPassword").value = "";
+ document.getElementById("loginMessage").textContent =
+  translations[currentLanguage].logoutSuccess;
 
- document.getElementById("loginMessage").textContent="Umetoka kwenye akaunti.";
-
+ applyLanguage();
 }
-
 
 async function restoreSession(){
 
@@ -438,9 +568,9 @@ async function restoreSession(){
 
  try{
 
-  const me=await request("/api/auth/me");
+  const me = await request("/api/auth/me");
 
-  if(me.user.role!=="CUSTOMER"){
+  if(me.user.role !== "CUSTOMER"){
    throw new Error("Not a customer");
   }
 
@@ -448,17 +578,28 @@ async function restoreSession(){
 
  }catch(error){
 
-  token="";
-
+  token = "";
   sessionStorage.removeItem("4u_customer_token");
-
  }
-
 }
 
-
+applyLanguage();
 restoreSession();
 
+</script>
+
+<script>
+if("serviceWorker" in navigator){
+
+ window.addEventListener("load",()=>{
+
+  navigator.serviceWorker.register("/service-worker.js")
+   .catch(error=>{
+    console.error("Service Worker error:",error);
+   });
+
+ });
+}
 </script>
 
 </body>
