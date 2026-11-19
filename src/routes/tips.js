@@ -1,3 +1,4 @@
+
 const express = require("express");
 const { z } = require("zod");
 const prisma = require("../lib/prisma");
@@ -8,14 +9,19 @@ const router = express.Router();
 router.use(requireAuth);
 
 const createSchema = z.object({
-  matchName: z.string().min(3).max(200),
-  prediction: z.string().min(1).max(200),
+  matchName: z.string().trim().min(3).max(200),
+  prediction: z.string().trim().min(1).max(200),
   odds: z.coerce.number().positive().max(10000).optional(),
   category: z.enum(["FREE", "PREMIUM"]).default("FREE"),
   kickoffAt: z.string().datetime().optional().nullable(),
   validityUntil: z.string().datetime()
 });
 
+const resultSchema = z.object({
+  result: z.enum(["WON", "LOST"])
+});
+
+// GET ALL TIPS
 router.get("/", async (req, res) => {
   try {
     const where =
@@ -39,23 +45,39 @@ router.get("/", async (req, res) => {
 
     res.json(tips);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Imeshindikana kupata tips." });
+    console.error("GET TIPS ERROR:", error);
+    res.status(500).json({
+      message: "Imeshindikana kupata tips."
+    });
   }
 });
 
+// CREATE TIP
 router.post("/", async (req, res) => {
   try {
     if (!["SUPER_ADMIN", "TIPSTER"].includes(req.user.role)) {
-      return res.status(403).json({ message: "Huruhusiwi kuchapisha tips." });
+      return res.status(403).json({
+        message: "Huruhusiwi kuchapisha tips."
+      });
     }
 
     const data = createSchema.parse(req.body);
+    const now = new Date();
     const validityUntil = new Date(data.validityUntil);
 
-    if (validityUntil <= new Date()) {
+    if (Number.isNaN(validityUntil.getTime()) || validityUntil <= now) {
       return res.status(400).json({
         message: "Muda wa mwisho lazima uwe mbele ya muda wa sasa."
+      });
+    }
+
+    const kickoffAt = data.kickoffAt
+      ? new Date(data.kickoffAt)
+      : null;
+
+    if (kickoffAt && Number.isNaN(kickoffAt.getTime())) {
+      return res.status(400).json({
+        message: "Muda wa kuanza mechi si sahihi."
       });
     }
 
@@ -66,8 +88,9 @@ router.post("/", async (req, res) => {
         prediction: data.prediction,
         odds: data.odds,
         category: data.category,
-        kickoffAt: data.kickoffAt ? new Date(data.kickoffAt) : null,
-        validityUntil
+        kickoffAt,
+        validityUntil,
+        result: "PENDING"
       }
     });
 
@@ -80,11 +103,14 @@ router.post("/", async (req, res) => {
       });
     }
 
-    console.error(error);
-    res.status(500).json({ message: "Imeshindikana kuchapisha tip." });
+    console.error("CREATE TIP ERROR:", error);
+    res.status(500).json({
+      message: "Imeshindikana kuchapisha tip."
+    });
   }
 });
 
+// DELETE TIP
 router.delete("/:id", async (req, res) => {
   try {
     const tip = await prisma.tip.findUnique({
@@ -92,48 +118,62 @@ router.delete("/:id", async (req, res) => {
     });
 
     if (!tip) {
-      return res.status(404).json({ message: "Tip haijapatikana." });
+      return res.status(404).json({
+        message: "Tip haijapatikana."
+      });
     }
 
     if (
       req.user.role !== "SUPER_ADMIN" &&
       tip.tipsterId !== req.user.id
     ) {
-      return res.status(403).json({ message: "Huruhusiwi kufuta tip hii." });
+      return res.status(403).json({
+        message: "Huruhusiwi kufuta tip hii."
+      });
     }
 
-    await prisma.tip.delete({ where: { id: tip.id } });
+    await prisma.tip.delete({
+      where: { id: tip.id }
+    });
 
-    res.json({ message: "Tip imefutwa." });
+    res.json({
+      message: "Tip imefutwa."
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Imeshindikana kufuta tip." });
+    console.error("DELETE TIP ERROR:", error);
+    res.status(500).json({
+      message: "Imeshindikana kufuta tip."
+    });
   }
 });
 
+// SUBMIT TIP RESULT
 router.patch("/:id/result", async (req, res) => {
   try {
     if (req.user.role !== "TIPSTER") {
       return res.status(403).json({
-        message: "Ni Tipster aliyechapisha tip pekee anayeruhusiwa kuweka matokeo."
+        message: "Tipster pekee ndiye anayeruhusiwa kuweka matokeo."
       });
     }
 
-    const schema = z.object({
-      result: z.enum(["WON", "LOST"])
-    });
-
-    const { result } = schema.parse(req.body);
+    const { result } = resultSchema.parse(req.body);
     const now = new Date();
 
+    // Update only the owner's pending tip after expiry.
+    // This prevents changing a result once it has been submitted.
     const updated = await prisma.tip.updateMany({
       where: {
         id: req.params.id,
         tipsterId: req.user.id,
         result: "PENDING",
-        validityUntil: { lte: now }
+        validityUntil: {
+          not: null,
+          lte: now
+        }
       },
-      data: { result }
+      data: {
+        result
+      }
     });
 
     if (updated.count === 0) {
@@ -142,21 +182,31 @@ router.patch("/:id/result", async (req, res) => {
       });
 
       if (!tip) {
-        return res.status(404).json({ message: "Tip haijapatikana." });
+        return res.status(404).json({
+          message: "Tip haijapatikana."
+        });
       }
 
       if (tip.tipsterId !== req.user.id) {
-        return res.status(403).json({ message: "Hii si tip yako." });
+        return res.status(403).json({
+          message: "Hii si tip yako."
+        });
       }
 
       if (tip.result !== "PENDING") {
         return res.status(400).json({
-          message: "Matokeo ya tip hii tayari yamewekwa na hayawezi kubadilishwa."
+          message: "Matokeo tayari yamewekwa na hayawezi kubadilishwa."
+        });
+      }
+
+      if (!tip.validityUntil || new Date(tip.validityUntil) > now) {
+        return res.status(400).json({
+          message: "Huwezi kuweka matokeo kabla muda wa tip kuisha."
         });
       }
 
       return res.status(400).json({
-        message: "Huwezi kuweka matokeo kabla muda wa tip kuisha."
+        message: "Imeshindikana kuhifadhi matokeo. Jaribu tena."
       });
     }
 
@@ -170,11 +220,15 @@ router.patch("/:id/result", async (req, res) => {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Chagua WON au LOST pekee." });
+      return res.status(400).json({
+        message: "Chagua WON au LOST pekee."
+      });
     }
 
-    console.error(error);
-    res.status(500).json({ message: "Imeshindikana kuhifadhi matokeo." });
+    console.error("TIP RESULT ERROR:", error);
+    res.status(500).json({
+      message: "Imeshindikana kuhifadhi matokeo."
+    });
   }
 });
 
