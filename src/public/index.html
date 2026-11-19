@@ -5,7 +5,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#063b2b">
-
 <title>4U'S TIPS 👑</title>
 
 <link rel="manifest" href="/manifest.json">
@@ -113,19 +112,50 @@ button{
 }
 
 .profile-button{margin-top:8px}
+
+/* SPLASH SCREEN */
+#splashScreen{
+ position:fixed;
+ inset:0;
+ z-index:99999;
+ background:#071b15;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ padding:20px;
+ opacity:1;
+ transition:opacity .6s ease;
+}
+
+#splashScreen img{
+ width:100%;
+ max-width:500px;
+ max-height:85vh;
+ object-fit:contain;
+}
+
+#splashScreen.hide{
+ opacity:0;
+ pointer-events:none;
+}
 </style>
 </head>
 
 <body>
 
+<!-- SPLASH SCREEN -->
+<div id="splashScreen">
+ <img
+  src="/file_000000009f7c8211ac5c5e84c74c7968.png"
+  alt="4U'S TIPS Splash Screen"
+  onerror="document.getElementById('splashScreen').remove()">
+</div>
+
 <header>
 <h1>4U'S TIPS ⚽</h1>
 <p>PREDICT SMARTER</p>
 
-<button
- id="languageButton"
- class="secondary"
- onclick="toggleLanguage()">
+<button id="languageButton" class="secondary" onclick="toggleLanguage()">
  🇹🇿 Kiswahili
 </button>
 </header>
@@ -137,48 +167,21 @@ button{
 <div class="panel">
 <h2 id="loginHeading">Ingia kwenye Akaunti</h2>
 
-<input
- id="loginUsername"
- placeholder="Jina la mtumiaji"
- autocomplete="username">
+<input id="loginUsername" placeholder="Jina la mtumiaji" autocomplete="username">
+<input id="loginPassword" type="password" placeholder="Nenosiri" autocomplete="current-password">
 
-<input
- id="loginPassword"
- type="password"
- placeholder="Nenosiri"
- autocomplete="current-password">
-
-<button onclick="login()" id="loginButton">
- Ingia
-</button>
-
+<button onclick="login()" id="loginButton">Ingia</button>
 <p id="loginMessage" class="message"></p>
 </div>
 
 <div class="panel">
 <h2 id="registerHeading">Tengeneza Akaunti</h2>
 
-<input
- id="registerUsername"
- placeholder="Jina la mtumiaji"
- autocomplete="username">
+<input id="registerUsername" placeholder="Jina la mtumiaji" autocomplete="username">
+<input id="registerEmail" type="email" placeholder="Barua pepe" autocomplete="email">
+<input id="registerPassword" type="password" placeholder="Tengeneza nenosiri (angalau herufi 8)" autocomplete="new-password">
 
-<input
- id="registerEmail"
- type="email"
- placeholder="Barua pepe"
- autocomplete="email">
-
-<input
- id="registerPassword"
- type="password"
- placeholder="Tengeneza nenosiri (angalau herufi 8)"
- autocomplete="new-password">
-
-<button onclick="register()" id="registerButton">
- Jisajili
-</button>
-
+<button onclick="register()" id="registerButton">Jisajili</button>
 <p id="registerMessage" class="message"></p>
 </div>
 
@@ -189,16 +192,11 @@ button{
 <div class="panel">
 <h2 id="welcome">Karibu</h2>
 
-<button
- class="secondary"
- onclick="loadTipsters()"
- id="refreshButton">
+<button class="secondary" onclick="loadTipsters()" id="refreshButton">
  Onyesha Tipsters Wapya
 </button>
 
-<button onclick="logout()" id="logoutButton">
- Toka
-</button>
+<button onclick="logout()" id="logoutButton">Toka</button>
 </div>
 
 <div class="panel">
@@ -209,13 +207,10 @@ button{
  mfanyie Follow na fungua profile yake kuona betting zake.
 </p>
 
-<div id="tipstersList">
- Inatafuta Tipsters...
-</div>
+<div id="tipstersList">Inatafuta Tipsters...</div>
 </div>
 
 </section>
-
 </main>
 
 <script>
@@ -232,7 +227,6 @@ if(currentLanguage !== "sw" && currentLanguage !== "en"){
 }
 
 const translations = {
-
  sw:{
   login:"Ingia kwenye Akaunti",
   register:"Tengeneza Akaunti",
@@ -261,7 +255,6 @@ const translations = {
   logoutSuccess:"Umetoka kwenye akaunti.",
   customerOnly:"Tumia akaunti ya Customer."
  },
-
  en:{
   login:"Customer Login",
   register:"Create Customer Account",
@@ -290,34 +283,27 @@ const translations = {
   logoutSuccess:"You have logged out.",
   customerOnly:"Please use a Customer account."
  }
-
 };
 
 function applyLanguage(){
-
  const t = translations[currentLanguage];
 
  document.documentElement.lang = currentLanguage;
 
  document.getElementById("loginHeading").textContent = t.login;
  document.getElementById("registerHeading").textContent = t.register;
-
  document.getElementById("loginUsername").placeholder = t.username;
  document.getElementById("loginPassword").placeholder = t.loginPassword;
-
  document.getElementById("registerUsername").placeholder = t.username;
  document.getElementById("registerEmail").placeholder = t.email;
  document.getElementById("registerPassword").placeholder = t.password;
 
  document.getElementById("loginButton").textContent = t.loginBtn;
  document.getElementById("registerButton").textContent = t.registerBtn;
-
  document.getElementById("refreshButton").textContent = t.refresh;
  document.getElementById("logoutButton").textContent = t.logout;
-
  document.getElementById("topHeading").textContent = t.top;
  document.getElementById("description").textContent = t.description;
-
  document.getElementById("languageButton").textContent = t.language;
 
  document.getElementById("welcome").textContent =
@@ -327,9 +313,7 @@ function applyLanguage(){
 }
 
 function toggleLanguage(){
-
  currentLanguage = currentLanguage === "sw" ? "en" : "sw";
-
  applyLanguage();
 
  if(!document.getElementById("customerSection").classList.contains("hidden")){
@@ -341,7 +325,6 @@ function toggleLanguage(){
 }
 
 async function request(path,options={}){
-
  const response = await fetch(API + path,{
   ...options,
   headers:{
@@ -352,7 +335,6 @@ async function request(path,options={}){
  });
 
  const text = await response.text();
-
  let data = {};
 
  try{
@@ -369,12 +351,10 @@ async function request(path,options={}){
 }
 
 async function register(){
-
  const message = document.getElementById("registerMessage");
  message.textContent = "";
 
  try{
-
   await request("/api/auth/register",{
    method:"POST",
    body:JSON.stringify({
@@ -384,21 +364,17 @@ async function register(){
    })
   });
 
-  message.textContent =
-   translations[currentLanguage].registerSuccess;
-
+  message.textContent = translations[currentLanguage].registerSuccess;
  }catch(error){
   message.textContent = error.message;
  }
 }
 
 async function login(){
-
  const message = document.getElementById("loginMessage");
  message.textContent = "";
 
  try{
-
   const result = await request("/api/auth/login",{
    method:"POST",
    body:JSON.stringify({
@@ -417,18 +393,14 @@ async function login(){
   }
 
   showCustomer(me.user.username);
-
  }catch(error){
-
   token = "";
   sessionStorage.removeItem("4u_customer_token");
-
   message.textContent = error.message;
  }
 }
 
 function showCustomer(username){
-
  currentUsername = username;
 
  document.getElementById("authSection").classList.add("hidden");
@@ -439,14 +411,12 @@ function showCustomer(username){
 }
 
 async function loadTipsters(){
-
  const list = document.getElementById("tipstersList");
  const t = translations[currentLanguage];
 
  list.textContent = t.loading;
 
  try{
-
   const result = await request("/api/tipsters");
   const tipsters = result.tipsters || [];
 
@@ -458,7 +428,6 @@ async function loadTipsters(){
   }
 
   tipsters.forEach(tipster=>{
-
    const card = document.createElement("div");
    card.className = "tip";
 
@@ -470,7 +439,6 @@ async function loadTipsters(){
    img.className = "avatar";
    img.src = tipster.profileImage ||
     "https://placehold.co/100x100/063b2b/d4af37?text=4U";
-
    img.alt = "Tipster profile";
 
    img.onerror = ()=>{
@@ -492,15 +460,13 @@ async function loadTipsters(){
    accuracy.textContent = t.accuracy + ": " + tipster.accuracy + "%";
 
    const wins = document.createElement("p");
-   wins.textContent =
-    t.wins + ": " + tipster.wins +
+   wins.textContent = t.wins + ": " + tipster.wins +
     " | " + t.losses + ": " + tipster.losses;
 
    info.append(name,followers,accuracy,wins);
    row.append(img,info);
 
    const followButton = document.createElement("button");
-
    followButton.textContent =
     tipster.isFollowing ? t.unfollow : t.follow;
 
@@ -516,37 +482,30 @@ async function loadTipsters(){
 
    card.append(row,followButton,profileButton);
    list.appendChild(card);
-
   });
-
  }catch(error){
   list.textContent = error.message;
  }
 }
 
 function openTipster(id){
-
  window.location.href =
   "tipster-profile.html?id=" + encodeURIComponent(id);
 }
 
 async function changeFollow(id,isFollowing){
-
  try{
-
   await request("/api/follows/" + encodeURIComponent(id),{
    method:isFollowing ? "DELETE" : "POST"
   });
 
   await loadTipsters();
-
  }catch(error){
   alert(error.message);
  }
 }
 
 function logout(){
-
  token = "";
  currentUsername = "";
 
@@ -554,7 +513,6 @@ function logout(){
 
  document.getElementById("customerSection").classList.add("hidden");
  document.getElementById("authSection").classList.remove("hidden");
-
  document.getElementById("loginPassword").value = "";
  document.getElementById("loginMessage").textContent =
   translations[currentLanguage].logoutSuccess;
@@ -563,11 +521,9 @@ function logout(){
 }
 
 async function restoreSession(){
-
  if(!token)return;
 
  try{
-
   const me = await request("/api/auth/me");
 
   if(me.user.role !== "CUSTOMER"){
@@ -575,9 +531,7 @@ async function restoreSession(){
   }
 
   showCustomer(me.user.username);
-
  }catch(error){
-
   token = "";
   sessionStorage.removeItem("4u_customer_token");
  }
@@ -586,18 +540,29 @@ async function restoreSession(){
 applyLanguage();
 restoreSession();
 
+/* ONDOA SPLASH SCREEN BAADA YA MUDA MFUPI */
+window.addEventListener("load",()=>{
+ setTimeout(()=>{
+  const splash = document.getElementById("splashScreen");
+
+  if(splash){
+   splash.classList.add("hide");
+
+   setTimeout(()=>{
+    splash.remove();
+   },600);
+  }
+ },2200);
+});
 </script>
 
 <script>
 if("serviceWorker" in navigator){
-
  window.addEventListener("load",()=>{
-
   navigator.serviceWorker.register("/service-worker.js")
    .catch(error=>{
     console.error("Service Worker error:",error);
    });
-
  });
 }
 </script>
