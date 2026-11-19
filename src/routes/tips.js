@@ -1,8 +1,8 @@
 
-const express = require("express");
-const { z } = require("zod");
-const prisma = require("../lib/prisma");
-const { requireAuth } = require("../middleware/auth");
+import express from "express";
+import { z } from "zod";
+import { prisma } from "../db.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -65,7 +65,10 @@ router.post("/", async (req, res) => {
     const now = new Date();
     const validityUntil = new Date(data.validityUntil);
 
-    if (Number.isNaN(validityUntil.getTime()) || validityUntil <= now) {
+    if (
+      Number.isNaN(validityUntil.getTime()) ||
+      validityUntil <= now
+    ) {
       return res.status(400).json({
         message: "Muda wa mwisho lazima uwe mbele ya muda wa sasa."
       });
@@ -159,8 +162,6 @@ router.patch("/:id/result", async (req, res) => {
     const { result } = resultSchema.parse(req.body);
     const now = new Date();
 
-    // Update only the owner's pending tip after expiry.
-    // This prevents changing a result once it has been submitted.
     const updated = await prisma.tip.updateMany({
       where: {
         id: req.params.id,
@@ -232,4 +233,4 @@ router.patch("/:id/result", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
