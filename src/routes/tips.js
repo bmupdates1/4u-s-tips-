@@ -8,13 +8,28 @@ const router = express.Router();
 
 router.use(requireAuth);
 
+const dateTimeSchema = z.preprocess((value) => {
+  if (typeof value !== "string" || !value.trim()) return value;
+
+  let normalized = value.trim();
+
+  if (!/(Z|[+-]\d{2}:\d{2})$/i.test(normalized)) {
+    normalized += "+03:00";
+  }
+
+  const date = new Date(normalized);
+
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toISOString();
+}, z.string().datetime());
+
 const createSchema = z.object({
   matchName: z.string().trim().min(3).max(200),
   prediction: z.string().trim().min(1).max(200),
   odds: z.coerce.number().positive().max(10000).optional(),
   category: z.enum(["FREE", "PREMIUM"]).default("FREE"),
-  kickoffAt: z.string().datetime().optional().nullable(),
-  validityUntil: z.string().datetime()
+  validityUntil: dateTimeSchema
 });
 
 const resultSchema = z.object({
@@ -24,10 +39,9 @@ const resultSchema = z.object({
 // GET ALL TIPS
 router.get("/", async (req, res) => {
   try {
-    const where =
-      req.user.role === "CUSTOMER"
-        ? { category: "FREE" }
-        : {};
+    const where = req.user.role === "CUSTOMER"
+      ? { category: "FREE" }
+      : {};
 
     const tips = await prisma.tip.findMany({
       where,
@@ -65,22 +79,9 @@ router.post("/", async (req, res) => {
     const now = new Date();
     const validityUntil = new Date(data.validityUntil);
 
-    if (
-      Number.isNaN(validityUntil.getTime()) ||
-      validityUntil <= now
-    ) {
+    if (validityUntil <= now) {
       return res.status(400).json({
-        message: "Muda wa mwisho lazima uwe mbele ya muda wa sasa."
-      });
-    }
-
-    const kickoffAt = data.kickoffAt
-      ? new Date(data.kickoffAt)
-      : null;
-
-    if (kickoffAt && Number.isNaN(kickoffAt.getTime())) {
-      return res.status(400).json({
-        message: "Muda wa kuanza mechi si sahihi."
+        message: "Expiry lazima iwe mbele ya muda wa kuchapisha."
       });
     }
 
@@ -91,13 +92,13 @@ router.post("/", async (req, res) => {
         prediction: data.prediction,
         odds: data.odds,
         category: data.category,
-        kickoffAt,
+        kickoffAt: now,
         validityUntil,
         result: "PENDING"
       }
     });
 
-    res.status(201).json(tip);
+    return res.status(201).json(tip);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -107,7 +108,7 @@ router.post("/", async (req, res) => {
     }
 
     console.error("CREATE TIP ERROR:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Imeshindikana kuchapisha tip."
     });
   }
@@ -139,12 +140,12 @@ router.delete("/:id", async (req, res) => {
       where: { id: tip.id }
     });
 
-    res.json({
+    return res.json({
       message: "Tip imefutwa."
     });
   } catch (error) {
     console.error("DELETE TIP ERROR:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Imeshindikana kufuta tip."
     });
   }
@@ -168,13 +169,10 @@ router.patch("/:id/result", async (req, res) => {
         tipsterId: req.user.id,
         result: "PENDING",
         validityUntil: {
-          not: null,
           lte: now
         }
       },
-      data: {
-        result
-      }
+      data: { result }
     });
 
     if (updated.count === 0) {
@@ -196,18 +194,18 @@ router.patch("/:id/result", async (req, res) => {
 
       if (tip.result !== "PENDING") {
         return res.status(400).json({
-          message: "Matokeo tayari yamewekwa na hayawezi kubadilishwa."
+          message: "Matokeo tayari yamewekwa."
         });
       }
 
-      if (!tip.validityUntil || new Date(tip.validityUntil) > now) {
+      if (new Date(tip.validityUntil) > now) {
         return res.status(400).json({
           message: "Huwezi kuweka matokeo kabla muda wa tip kuisha."
         });
       }
 
       return res.status(400).json({
-        message: "Imeshindikana kuhifadhi matokeo. Jaribu tena."
+        message: "Imeshindikana kuhifadhi matokeo."
       });
     }
 
@@ -215,7 +213,7 @@ router.patch("/:id/result", async (req, res) => {
       where: { id: req.params.id }
     });
 
-    res.json({
+    return res.json({
       message: "Matokeo yamehifadhiwa.",
       tip: updatedTip
     });
@@ -227,7 +225,7 @@ router.patch("/:id/result", async (req, res) => {
     }
 
     console.error("TIP RESULT ERROR:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Imeshindikana kuhifadhi matokeo."
     });
   }
