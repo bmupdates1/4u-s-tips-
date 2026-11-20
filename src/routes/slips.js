@@ -8,8 +8,8 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-// Kubadilisha datetime-local kuwa ISO datetime.
-// Saa za Tanzania ni UTC+3.
+// Kubadilisha tarehe za HTML datetime-local kuwa ISO.
+// Tarehe zisizo na timezone zinachukuliwa kuwa saa za Tanzania (UTC+3).
 const dateTimeSchema = z.preprocess((value) => {
   if (typeof value !== "string" || !value.trim()) {
     return value;
@@ -17,7 +17,6 @@ const dateTimeSchema = z.preprocess((value) => {
 
   let normalized = value.trim();
 
-  // Kama tarehe haina timezone, ongeza UTC+3.
   const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized);
 
   if (!hasTimezone) {
@@ -35,19 +34,12 @@ const dateTimeSchema = z.preprocess((value) => {
 
 const slipSchema = z.object({
   title: z.string().trim().min(2).max(200),
-
   riskLabel: z.string().max(100).optional().nullable(),
-
   totalOdds: z.coerce.number().positive().max(100000),
-
   price: z.coerce.number().min(0).default(0),
-
   category: z.enum(["FREE", "PREMIUM"]).default("FREE"),
-
   validityUntil: dateTimeSchema,
-
   kickoffAt: dateTimeSchema,
-
   bookingCodes: z.array(
     z.object({
       bookmaker: z.enum(["SPORTYBET", "BETPAWA"]),
@@ -70,26 +62,20 @@ router.post("/", async (req, res) => {
     }
 
     const data = slipSchema.parse(req.body);
-
     const now = new Date();
+
     const validityUntil = new Date(data.validityUntil);
     const kickoffAt = new Date(data.kickoffAt);
 
     if (validityUntil <= now) {
       return res.status(400).json({
-        message: "Muda wa mwisho lazima uwe mbele ya muda wa sasa."
+        message: "Muda wa mwisho wa mkeka lazima uwe mbele ya muda wa sasa."
       });
     }
 
     if (kickoffAt <= now) {
       return res.status(400).json({
         message: "Kickoff lazima uwe mbele ya muda wa sasa."
-      });
-    }
-
-    if (validityUntil > kickoffAt) {
-      return res.status(400).json({
-        message: "Muda wa mwisho wa slip lazima uwe sawa na au kabla ya kickoff."
       });
     }
 
@@ -129,10 +115,7 @@ router.post("/", async (req, res) => {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error(
-        "SLIP VALIDATION ERRORS:",
-        error.issues || error.errors
-      );
+      console.error("SLIP VALIDATION ERRORS:", error.issues || error.errors);
 
       return res.status(400).json({
         message: "Taarifa za slip hazijakamilika au si sahihi.",
@@ -322,7 +305,7 @@ router.patch("/:id/start-kickoff", async (req, res) => {
   }
 });
 
-// KUWEKA MATOKEO YA WON AU LOST
+// KUWEKA MATOKEO YA WON AU LOST BAADA YA EXPIRY
 router.patch("/:id/result", async (req, res) => {
   try {
     if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
@@ -384,7 +367,7 @@ router.patch("/:id/result", async (req, res) => {
         new Date(slip.validityUntil) > now
       ) {
         return res.status(400).json({
-          message: "Subiri muda wa slip kuisha kabla ya kuweka matokeo."
+          message: "Subiri muda wa mkeka kuisha kabla ya kuweka matokeo."
         });
       }
 
