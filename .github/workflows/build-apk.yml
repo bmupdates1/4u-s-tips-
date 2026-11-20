@@ -1,0 +1,76 @@
+
+name: Build 4U'S TIPS Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get project files
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Prepare Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
+          mkdir -p www
+          echo '<!doctype html><html><head><meta charset="utf-8"></head><body>4U'S TIPS</body></html>' > www/index.html
+
+      - name: Configure 4U'S TIPS
+        run: |
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.fourustips.app",
+            "appName": "4U'S TIPS",
+            "webDir": "www",
+            "server": {
+              "url": "https://fouru-s-tips-1.onrender.com",
+              "cleartext": false
+            }
+          }
+          EOF
+
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: Sync Android project
+        run: npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Save APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 4US-TIPS-Android-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
