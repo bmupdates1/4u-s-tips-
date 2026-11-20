@@ -8,14 +8,46 @@ const router = express.Router();
 
 router.use(requireAuth);
 
+// Kubadilisha datetime-local kuwa ISO datetime.
+// Saa za Tanzania ni UTC+3.
+const dateTimeSchema = z.preprocess((value) => {
+  if (typeof value !== "string" || !value.trim()) {
+    return value;
+  }
+
+  let normalized = value.trim();
+
+  // Kama tarehe haina timezone, ongeza UTC+3.
+  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized);
+
+  if (!hasTimezone) {
+    normalized += "+03:00";
+  }
+
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toISOString();
+}, z.string().datetime());
+
 const slipSchema = z.object({
   title: z.string().trim().min(2).max(200),
+
   riskLabel: z.string().max(100).optional().nullable(),
+
   totalOdds: z.coerce.number().positive().max(100000),
+
   price: z.coerce.number().min(0).default(0),
+
   category: z.enum(["FREE", "PREMIUM"]).default("FREE"),
-  validityUntil: z.string().datetime(),
-  kickoffAt: z.string().datetime(),
+
+  validityUntil: dateTimeSchema,
+
+  kickoffAt: dateTimeSchema,
+
   bookingCodes: z.array(
     z.object({
       bookmaker: z.enum(["SPORTYBET", "BETPAWA"]),
@@ -38,24 +70,18 @@ router.post("/", async (req, res) => {
     }
 
     const data = slipSchema.parse(req.body);
-    const now = new Date();
 
+    const now = new Date();
     const validityUntil = new Date(data.validityUntil);
     const kickoffAt = new Date(data.kickoffAt);
 
-    if (
-      Number.isNaN(validityUntil.getTime()) ||
-      validityUntil <= now
-    ) {
+    if (validityUntil <= now) {
       return res.status(400).json({
         message: "Muda wa mwisho lazima uwe mbele ya muda wa sasa."
       });
     }
 
-    if (
-      Number.isNaN(kickoffAt.getTime()) ||
-      kickoffAt <= now
-    ) {
+    if (kickoffAt <= now) {
       return res.status(400).json({
         message: "Kickoff lazima uwe mbele ya muda wa sasa."
       });
@@ -63,7 +89,7 @@ router.post("/", async (req, res) => {
 
     if (validityUntil > kickoffAt) {
       return res.status(400).json({
-        message: "Muda wa mwisho wa slip hauwezi kuzidi kickoff."
+        message: "Muda wa mwisho wa slip lazima uwe sawa na au kabla ya kickoff."
       });
     }
 
@@ -103,9 +129,14 @@ router.post("/", async (req, res) => {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error(
+        "SLIP VALIDATION ERRORS:",
+        error.issues || error.errors
+      );
+
       return res.status(400).json({
         message: "Taarifa za slip hazijakamilika au si sahihi.",
-        errors: error.errors
+        errors: error.issues || error.errors
       });
     }
 
@@ -379,7 +410,8 @@ router.patch("/:id/result", async (req, res) => {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
-        message: "Chagua WON au LOST pekee."
+        message: "Chagua WON au LOST pekee.",
+        errors: error.issues || error.errors
       });
     }
 
