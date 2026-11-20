@@ -609,20 +609,38 @@ async function restoreSession(){
 applyLanguage();
 restoreSession();
 
-/* ONDOA SPLASH SCREEN BAADA YA MUDA MFUPI */
-window.addEventListener("load",()=>{
- setTimeout(()=>{
+/* ONDOA SPLASH SCREEN BILA KUTEGEMEA PICHA ZOTE KUPAKIA */
+(function(){
+ function hideSplash(){
   const splash = document.getElementById("splashScreen");
 
-  if(splash){
-   splash.classList.add("hide");
+  if(!splash || splash.dataset.hiding === "true") return;
 
-   setTimeout(()=>{
-    splash.remove();
-   },600);
-  }
- },2200);
-});
+  splash.dataset.hiding = "true";
+  splash.classList.add("hide");
+
+  setTimeout(()=>{
+   splash.remove();
+  },650);
+ }
+
+ // Njia ya ziada: splash isibaki hata kama ukurasa unasubiri rasilimali.
+ setTimeout(hideSplash,5000);
+
+ // Ondoa splash mara DOM inapokuwa tayari.
+ if(document.readyState === "interactive" || document.readyState === "complete"){
+  setTimeout(hideSplash,1800);
+ }else{
+  document.addEventListener("DOMContentLoaded",()=>{
+   setTimeout(hideSplash,1800);
+  },{once:true});
+ }
+
+ // Ikiwa kila kitu kitapakia mapema, ondoa splash mapema pia.
+ window.addEventListener("load",()=>{
+  setTimeout(hideSplash,1200);
+ },{once:true});
+})();
 </script>
 
 <script>
