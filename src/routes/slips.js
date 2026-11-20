@@ -1,3 +1,4 @@
+
 import express from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
@@ -6,20 +7,6 @@ import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 
 router.use(requireAuth);
-
-// Kuficha slips ambazo kickoff imefika.
-// isLocked inabaki kwa ajili ya Premium access pekee.
-async function lockExpiredSlips() {
-  await prisma.slip.updateMany({
-    where: {
-      isPublished: true,
-      kickoffAt: { lte: new Date() }
-    },
-    data: {
-      isPublished: false
-    }
-  });
-}
 
 const slipSchema = z.object({
   title: z.string().trim().min(2).max(200),
@@ -52,6 +39,7 @@ router.post("/", async (req, res) => {
 
     const data = slipSchema.parse(req.body);
     const now = new Date();
+
     const validityUntil = new Date(data.validityUntil);
     const kickoffAt = new Date(data.kickoffAt);
 
@@ -111,7 +99,8 @@ router.post("/", async (req, res) => {
       }
     });
 
-    res.status(201).json(slip);
+    return res.status(201).json(slip);
+
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -121,7 +110,8 @@ router.post("/", async (req, res) => {
     }
 
     console.error("CREATE SLIP ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kuchapisha slip."
     });
   }
@@ -142,10 +132,12 @@ router.get("/mine", async (req, res) => {
       }
     });
 
-    res.json(slips);
+    return res.json(slips);
+
   } catch (error) {
     console.error("GET MY SLIPS ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kupata slips zako."
     });
   }
@@ -154,12 +146,9 @@ router.get("/mine", async (req, res) => {
 // SLIPS ZOTE ZINAZOONEKANA KWA WATEJA
 router.get("/", async (req, res) => {
   try {
-    await lockExpiredSlips();
-
     const slips = await prisma.slip.findMany({
       where: {
-        isPublished: true,
-        isLocked: false
+        isPublished: true
       },
       include: {
         tipster: {
@@ -190,10 +179,12 @@ router.get("/", async (req, res) => {
       };
     });
 
-    res.json(results);
+    return res.json(results);
+
   } catch (error) {
     console.error("GET SLIPS ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kupata slips."
     });
   }
@@ -202,13 +193,10 @@ router.get("/", async (req, res) => {
 // KUPATA SLIP MOJA
 router.get("/:id", async (req, res) => {
   try {
-    await lockExpiredSlips();
-
     const slip = await prisma.slip.findFirst({
       where: {
         id: req.params.id,
-        isPublished: true,
-        isLocked: false
+        isPublished: true
       },
       include: {
         tipster: {
@@ -236,10 +224,12 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    res.json(slip);
+    return res.json(slip);
+
   } catch (error) {
     console.error("GET SINGLE SLIP ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kupata slip."
     });
   }
@@ -290,21 +280,23 @@ router.patch("/:id/start-kickoff", async (req, res) => {
       }
     });
 
-    res.json(updated);
+    return res.json(updated);
+
   } catch (error) {
     console.error("START KICKOFF ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kuanzisha kickoff."
     });
   }
 });
 
-// KUWEKA MATOKEO BAADA YA EXPIRY
+// KUWEKA MATOKEO YA WON AU LOST
 router.patch("/:id/result", async (req, res) => {
   try {
-    if (req.user.role !== "TIPSTER") {
+    if (!["TIPSTER", "SUPER_ADMIN"].includes(req.user.role)) {
       return res.status(403).json({
-        message: "Tipster pekee ndiye anayeruhusiwa kuweka matokeo."
+        message: "Huruhusiwi kuweka matokeo."
       });
     }
 
@@ -314,7 +306,9 @@ router.patch("/:id/result", async (req, res) => {
     const updated = await prisma.slip.updateMany({
       where: {
         id: req.params.id,
-        tipsterId: req.user.id,
+        ...(req.user.role === "SUPER_ADMIN"
+          ? {}
+          : { tipsterId: req.user.id }),
         result: "PENDING",
         validityUntil: {
           not: null,
@@ -339,7 +333,10 @@ router.patch("/:id/result", async (req, res) => {
         });
       }
 
-      if (slip.tipsterId !== req.user.id) {
+      if (
+        req.user.role !== "SUPER_ADMIN" &&
+        slip.tipsterId !== req.user.id
+      ) {
         return res.status(403).json({
           message: "Hii si slip yako."
         });
@@ -347,7 +344,7 @@ router.patch("/:id/result", async (req, res) => {
 
       if (slip.result !== "PENDING") {
         return res.status(400).json({
-          message: "Matokeo tayari yamewekwa na hayawezi kubadilishwa."
+          message: "Matokeo tayari yamewekwa."
         });
       }
 
@@ -356,12 +353,12 @@ router.patch("/:id/result", async (req, res) => {
         new Date(slip.validityUntil) > now
       ) {
         return res.status(400).json({
-          message: "Huwezi kuweka matokeo kabla muda wa slip kuisha."
+          message: "Subiri muda wa slip kuisha kabla ya kuweka matokeo."
         });
       }
 
       return res.status(400).json({
-        message: "Imeshindikana kuhifadhi matokeo. Jaribu tena."
+        message: "Imeshindikana kuhifadhi matokeo."
       });
     }
 
@@ -374,10 +371,11 @@ router.patch("/:id/result", async (req, res) => {
       }
     });
 
-    res.json({
+    return res.json({
       message: "Matokeo ya slip yamehifadhiwa.",
       slip: updatedSlip
     });
+
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -386,7 +384,8 @@ router.patch("/:id/result", async (req, res) => {
     }
 
     console.error("SLIP RESULT ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kuhifadhi matokeo."
     });
   }
@@ -429,12 +428,14 @@ router.delete("/:id", async (req, res) => {
       })
     ]);
 
-    res.json({
+    return res.json({
       message: "Slip imefutwa."
     });
+
   } catch (error) {
     console.error("DELETE SLIP ERROR:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Imeshindikana kufuta slip."
     });
   }
