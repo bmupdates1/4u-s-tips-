@@ -24,6 +24,8 @@ button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px;bor
 .lock-label{color:#d4af37;font-weight:bold}
 .premium-title{color:#d4af37}
 .free-title{color:#35d39a}
+.result{font-weight:bold;color:#d4af37}
+.expiry{color:#aaa;font-size:13px}
 </style>
 </head>
 
@@ -54,6 +56,16 @@ button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:15px;bor
 <div id="premiumTips">Loading PREMIUM tips...</div>
 </div>
 
+<div class="panel">
+<h2 class="free-title">FREE BOOKING SLIPS</h2>
+<div id="freeSlips">Loading FREE slips...</div>
+</div>
+
+<div class="panel">
+<h2 class="premium-title">PREMIUM BOOKING SLIPS 🔒</h2>
+<div id="premiumSlips">Loading PREMIUM slips...</div>
+</div>
+
 </main>
 
 <script>
@@ -64,13 +76,15 @@ let token="";
 
 async function request(path){
  const response=await fetch(API+path,{
-  headers:{"Authorization":"Bearer "+token}
+  headers:{
+   "Authorization":"Bearer "+token
+  }
  });
 
  const data=await response.json();
 
  if(!response.ok){
-  throw new Error(data.error||"Request failed");
+  throw new Error(data.message||data.error||"Request failed");
  }
 
  return data;
@@ -84,6 +98,14 @@ function showError(message){
  document.getElementById("profile").textContent=message;
  document.getElementById("freeTips").textContent=message;
  document.getElementById("premiumTips").textContent=message;
+ document.getElementById("freeSlips").textContent=message;
+ document.getElementById("premiumSlips").textContent=message;
+}
+
+function addText(parent,label,value){
+ const p=document.createElement("p");
+ p.textContent=label+": "+value;
+ parent.appendChild(p);
 }
 
 function createFreeTip(tip){
@@ -93,16 +115,18 @@ function createFreeTip(tip){
  const match=document.createElement("h3");
  match.textContent=tip.matchName||"Match";
 
- const prediction=document.createElement("p");
- prediction.textContent="Prediction: "+(tip.prediction||"Not available");
-
- const odds=document.createElement("p");
- odds.textContent="Odds: "+(tip.odds??"Not set");
+ addText(card,"Prediction",tip.prediction||"Not available");
+ addText(card,"Odds",tip.odds??"Not set");
 
  const result=document.createElement("p");
- result.textContent="Result: "+(tip.result||"Pending");
+ result.className="result";
+ result.textContent="Result: "+(tip.result||"PENDING");
 
- card.append(match,prediction,odds,result);
+ card.append(match,result);
+
+ if(tip.validityUntil){
+  addText(card,"Expires",new Date(tip.validityUntil).toLocaleString());
+ }
 
  return card;
 }
@@ -131,11 +155,85 @@ function createPremiumTip(tip){
  button.textContent="PREMIUM ACCESS COMING SOON";
  button.disabled=true;
  button.style.opacity="0.7";
- button.style.cursor="not-allowed";
 
  card.append(label,match,info,hidden,odds,button);
+ return card;
+}
+
+function createFreeSlip(slip){
+ const card=document.createElement("div");
+ card.className="tip";
+
+ const title=document.createElement("h3");
+ title.textContent=slip.title||"Booking Slip";
+
+ card.appendChild(title);
+
+ addText(card,"Total Odds",slip.totalOdds??"Not set");
+ addText(card,"Risk",slip.riskLabel||"Not set");
+
+ const result=document.createElement("p");
+ result.className="result";
+ result.textContent="Result: "+(slip.result||"PENDING");
+ card.appendChild(result);
+
+ if(slip.validityUntil){
+  addText(card,"Expires",new Date(slip.validityUntil).toLocaleString());
+ }
+
+ (slip.bookingCodes||[]).forEach(code=>{
+  addText(card,code.bookmaker||"Booking Code",code.code||"");
+ });
 
  return card;
+}
+
+function createPremiumSlip(slip){
+ const card=document.createElement("div");
+ card.className="tip locked";
+
+ const label=document.createElement("p");
+ label.className="lock-label";
+ label.textContent="🔒 PREMIUM LOCKED";
+
+ const title=document.createElement("h3");
+ title.textContent=slip.title||"Premium Booking Slip";
+
+ const info=document.createElement("p");
+ info.textContent="This is an exclusive Premium booking slip.";
+
+ const button=document.createElement("button");
+ button.textContent="PREMIUM ACCESS COMING SOON";
+ button.disabled=true;
+ button.style.opacity="0.7";
+
+ card.append(label,title,info,button);
+ return card;
+}
+
+async function changeFollow(isFollowing){
+ try{
+  const response=await fetch(
+   API+"/api/follows/"+encodeURIComponent(tipsterId),
+   {
+    method:isFollowing?"DELETE":"POST",
+    headers:{
+     "Authorization":"Bearer "+token
+    }
+   }
+  );
+
+  const data=await response.json();
+
+  if(!response.ok){
+   throw new Error(data.error||"Follow action failed");
+  }
+
+  await loadProfile();
+
+ }catch(error){
+  alert(error.message);
+ }
 }
 
 async function loadProfile(){
@@ -162,9 +260,10 @@ async function loadProfile(){
    "/api/tipsters/"+encodeURIComponent(tipsterId)
   );
 
-  const t=result.tipster;
+  // API yako inarudisha profile moja kwa moja.
+  const t=result.tipster||result;
 
-  if(!t){
+  if(!t || !t.id){
    throw new Error("Tipster profile haijapatikana.");
   }
 
@@ -185,86 +284,90 @@ async function loadProfile(){
 
   const followers=document.createElement("p");
   followers.className="stats";
-  followers.textContent="Followers: "+t.followers;
+  followers.textContent="Followers: "+
+   (t.followersCount??t.followers??0);
+
+  const stats=t.stats||{};
 
   const accuracy=document.createElement("h3");
-  accuracy.textContent="Winning Accuracy: "+t.accuracy+"%";
+  accuracy.textContent="Winning Accuracy: "+
+   (stats.accuracy??t.accuracy??0)+"%";
 
   const record=document.createElement("p");
-  record.textContent="Wins: "+t.wins+" | Losses: "+t.losses;
+  record.textContent="Wins: "+
+   (stats.wins??t.wins??0)+" | Losses: "+
+   (stats.losses??t.losses??0);
 
   const follow=document.createElement("button");
   follow.textContent=t.isFollowing?"Unfollow":"Follow";
-  follow.onclick=()=>changeFollow(t.isFollowing);
+  follow.onclick=()=>changeFollow(!!t.isFollowing);
 
-  profile.append(
-   img,
-   name,
-   followers,
-   accuracy,
-   record,
-   follow
+  profile.append(img,name,followers,accuracy,record,follow);
+
+  const now=Date.now();
+
+  // Customer anaonyeshwa tips ambazo muda wake haujaisha.
+  const tips=(t.tips||[]).filter(tip=>
+   !tip.validityUntil ||
+   new Date(tip.validityUntil).getTime()>now
   );
 
-  const tips=t.tips||[];
+  const freeTips=tips.filter(tip=>tip.category==="FREE");
+  const premiumTips=tips.filter(tip=>tip.category==="PREMIUM");
 
-  const freeTips=tips.filter(
-   tip=>tip.category==="FREE"
+  const slips=(t.slips||[]).filter(slip=>
+   slip.isPublished!==false &&
+   slip.validityUntil &&
+   new Date(slip.validityUntil).getTime()>now
   );
 
-  const premiumTips=tips.filter(
-   tip=>tip.category==="PREMIUM"
-  );
+  const freeSlips=slips.filter(slip=>slip.category==="FREE");
+  const premiumSlips=slips.filter(slip=>slip.category==="PREMIUM");
 
   const freeList=document.getElementById("freeTips");
   const premiumList=document.getElementById("premiumTips");
+  const freeSlipList=document.getElementById("freeSlips");
+  const premiumSlipList=document.getElementById("premiumSlips");
 
   freeList.innerHTML="";
   premiumList.innerHTML="";
+  freeSlipList.innerHTML="";
+  premiumSlipList.innerHTML="";
 
   if(!freeTips.length){
-   freeList.textContent="Hakuna FREE tips kwa sasa.";
+   freeList.textContent="Hakuna FREE tips zinazoendelea kwa sasa.";
   }else{
-   freeTips.forEach(tip=>{
-    freeList.appendChild(createFreeTip(tip));
-   });
+   freeTips.forEach(tip=>
+    freeList.appendChild(createFreeTip(tip))
+   );
   }
 
   if(!premiumTips.length){
-   premiumList.textContent="Hakuna PREMIUM tips kwa sasa.";
+   premiumList.textContent="Hakuna PREMIUM tips zinazoendelea kwa sasa.";
   }else{
-   premiumTips.forEach(tip=>{
-    premiumList.appendChild(createPremiumTip(tip));
-   });
+   premiumTips.forEach(tip=>
+    premiumList.appendChild(createPremiumTip(tip))
+   );
+  }
+
+  if(!freeSlips.length){
+   freeSlipList.textContent="Hakuna FREE slips zinazoendelea kwa sasa.";
+  }else{
+   freeSlips.forEach(slip=>
+    freeSlipList.appendChild(createFreeSlip(slip))
+   );
+  }
+
+  if(!premiumSlips.length){
+   premiumSlipList.textContent="Hakuna PREMIUM slips zinazoendelea kwa sasa.";
+  }else{
+   premiumSlips.forEach(slip=>
+    premiumSlipList.appendChild(createPremiumSlip(slip))
+   );
   }
 
  }catch(error){
   showError(error.message);
- }
-}
-
-async function changeFollow(isFollowing){
- try{
-  const response=await fetch(
-   API+"/api/follows/"+encodeURIComponent(tipsterId),
-   {
-    method:isFollowing?"DELETE":"POST",
-    headers:{
-     "Authorization":"Bearer "+token
-    }
-   }
-  );
-
-  const data=await response.json();
-
-  if(!response.ok){
-   throw new Error(data.error||"Follow action failed");
-  }
-
-  await loadProfile();
-
- }catch(error){
-  alert(error.message);
  }
 }
 
